@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Pamwechete",
+    "slug": "pamwechete-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/image/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/image/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#003C5C"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pamwechete.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#003C5C"
+      },
+      "package": "com.pamwechete.mobile"
+    },
+    "web": {
+      "favicon": "./assets/image/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "scheme": "pamwechete"
+  }
+}
