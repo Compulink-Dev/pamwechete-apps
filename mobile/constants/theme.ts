@@ -16,11 +16,31 @@ export const COLORS = {
   shadow: '#000000',
 };
 
-export const FONTS = {
-  regular: 'System',
-  medium: 'System',
-  bold: 'System',
-  semibold: 'System',
+// Define font weight types
+type FontWeight = 'regular' | 'medium' | 'semibold' | 'bold';
+
+// Font configuration with fallbacks
+export const FONTS: Record<FontWeight, string> & { fallback: Record<FontWeight, string> } = {
+  // Try custom fonts first, fall back to system fonts
+  regular: 'Rubik_400Regular',
+  medium: 'Rubik_500Medium', 
+  semibold: 'Rubik_600SemiBold',
+  bold: 'Rubik_700Bold',
+  
+  // Fallback fonts for when custom fonts aren't available
+  fallback: {
+    regular: 'System',
+    medium: 'System',
+    semibold: 'System',
+    bold: 'System',
+  }
+};
+
+// Helper function to get font with fallback
+export const getFontFamily = (fontWeight: FontWeight): string => {
+  // For now, always use system fonts to avoid crashes
+  // You can modify this later to check if custom fonts are loaded
+  return FONTS.fallback[fontWeight];
 };
 
 export const SIZES = {

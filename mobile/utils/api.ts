@@ -1,11 +1,16 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+console.log('🔌 Environment variables check:');
+console.log('EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
+console.log('Final API_URL:', API_URL);
+console.log('All env vars:', Object.keys(process.env).filter(key => key.includes('EXPO')));
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  timeout: 15000, // Increased timeout
   headers: {
     'Content-Type': 'application/json',
   },
@@ -14,25 +19,47 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
-    const token = await SecureStore.getItemAsync('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    try {
+      const token = await SecureStore.getItemAsync('auth_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.warn('Error getting auth token:', error);
     }
     return config;
   },
   (error) => {
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
 // Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response;
+  },
   (error) => {
+    console.error('API Error:', {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      url: error.config?.url,
+    });
+    
     if (error.response?.status === 401) {
       // Handle unauthorized access
       SecureStore.deleteItemAsync('auth_token');
     }
+    
+    // Handle network errors
+    if (error.code === 'ECONNABORTED') {
+      error.message = 'Request timeout. Please check your connection.';
+    } else if (!error.response) {
+      error.message = 'Network error. Please check your connection.';
+    }
+    
     return Promise.reject(error);
   }
 );

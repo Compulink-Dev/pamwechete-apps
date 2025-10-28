@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
-import { COLORS, SIZES, SHADOWS } from "../../constants/theme";
+import { COLORS, SIZES, SHADOWS, FONTS } from "../../constants/theme";
 import api, { endpoints } from "../../utils/api";
 
 interface Trade {
@@ -244,10 +244,11 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: SIZES.small,
     color: COLORS.text.secondary,
+    fontFamily: FONTS.regular,
   },
   userName: {
     fontSize: SIZES.body,
-    fontWeight: "bold",
+    fontFamily: FONTS.bold,
     color: COLORS.primary,
   },
   addButton: {
@@ -261,7 +262,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: COLORS.white,
-    fontWeight: "bold",
+    fontFamily: FONTS.bold,
     fontSize: SIZES.small,
   },
   portfolioCard: {
@@ -273,7 +274,7 @@ const styles = StyleSheet.create({
   },
   portfolioTitle: {
     fontSize: SIZES.body,
-    fontWeight: "600",
+    fontFamily: FONTS.semibold,
     color: COLORS.text.primary,
     marginBottom: SIZES.sm,
   },
@@ -287,11 +288,12 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: SIZES.h3,
-    fontWeight: "bold",
+    fontFamily: FONTS.bold,
     color: COLORS.primary,
   },
   statLabel: {
     fontSize: SIZES.small,
+    fontFamily: FONTS.regular,
     color: COLORS.text.secondary,
     marginTop: SIZES.xs,
   },
@@ -301,7 +303,7 @@ const styles = StyleSheet.create({
   },
   tradePoints: {
     fontSize: SIZES.h2,
-    fontWeight: "bold",
+    fontFamily: FONTS.bold,
     color: COLORS.secondary,
     textAlign: "center",
     marginTop: SIZES.sm,
@@ -315,13 +317,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: SIZES.h4,
-    fontWeight: "bold",
+    fontFamily: FONTS.bold,
     color: COLORS.text.primary,
   },
   seeAllText: {
     fontSize: SIZES.small,
     color: COLORS.secondary,
-    fontWeight: "600",
+    fontFamily: FONTS.semibold,
   },
   scrollView: {
     flex: 1,
@@ -353,7 +355,7 @@ const styles = StyleSheet.create({
   },
   tradeTitle: {
     fontSize: SIZES.body,
-    fontWeight: "bold",
+    fontFamily: FONTS.bold,
     color: COLORS.text.primary,
     flex: 1,
   },
@@ -366,10 +368,11 @@ const styles = StyleSheet.create({
   pointsText: {
     color: COLORS.white,
     fontSize: SIZES.tiny,
-    fontWeight: "bold",
+    fontFamily: FONTS.bold,
   },
   tradeDescription: {
     fontSize: SIZES.small,
+    fontFamily: FONTS.regular,
     color: COLORS.text.secondary,
     marginBottom: SIZES.sm,
   },
@@ -385,6 +388,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: SIZES.tiny,
+    fontFamily: FONTS.regular,
     color: COLORS.text.secondary,
   },
   exchangeButton: {
@@ -405,6 +409,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: SIZES.body,
+    fontFamily: FONTS.regular,
     color: COLORS.text.light,
     marginTop: SIZES.md,
   },
@@ -428,11 +433,12 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: SIZES.h3,
-    fontWeight: "bold",
+    fontFamily: FONTS.bold,
     color: COLORS.text.primary,
   },
   modalSubtitle: {
     fontSize: SIZES.small,
+    fontFamily: FONTS.regular,
     color: COLORS.text.secondary,
     marginBottom: SIZES.xl,
   },
@@ -454,7 +460,7 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: COLORS.white,
     fontSize: SIZES.body,
-    fontWeight: "bold",
+    fontFamily: FONTS.bold,
   },
   modalButtonTextSecondary: {
     color: COLORS.primary,

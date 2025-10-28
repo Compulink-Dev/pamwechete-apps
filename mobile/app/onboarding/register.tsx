@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
@@ -9,55 +9,63 @@ import {
   SafeAreaView,
   Alert,
   ActivityIndicator,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useSignUp } from '@clerk/clerk-expo';
-import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
-import api, { endpoints } from '../../utils/api';
+} from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { useSignUp } from "@clerk/clerk-expo";
+import { COLORS, SIZES, SHADOWS } from "../../constants/theme";
 
 export default function OnboardingRegister() {
   const params = useLocalSearchParams();
-  const { signUp, setActive } = useSignUp();
-  
+  const { signUp, setActive, isLoaded } = useSignUp();
+
   const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
+    name: "",
+    phone: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
   });
   const [loading, setLoading] = useState(false);
 
-  const interests = params.interests ? JSON.parse(params.interests as string) : [];
-  const offerings = params.offerings ? JSON.parse(params.offerings as string) : [];
+  const interests = params.interests
+    ? JSON.parse(params.interests as string)
+    : [];
+  const offerings = params.offerings
+    ? JSON.parse(params.offerings as string)
+    : [];
 
   const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const validateForm = () => {
-    if (!formData.name || !formData.phone || !formData.email || !formData.password) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    if (
+      !formData.name ||
+      !formData.phone ||
+      !formData.email ||
+      !formData.password
+    ) {
+      Alert.alert("Error", "Please fill in all required fields");
       return false;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert("Error", "Passwords do not match");
       return false;
     }
 
     if (formData.password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
+      Alert.alert("Error", "Password must be at least 8 characters");
       return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert("Error", "Please enter a valid email address");
       return false;
     }
 
@@ -67,57 +75,61 @@ export default function OnboardingRegister() {
   const handleRegister = async () => {
     if (!validateForm()) return;
 
+    if (!signUp || !isLoaded) {
+      Alert.alert(
+        "Error",
+        "Registration service is not ready. Please try again."
+      );
+      return;
+    }
+
     setLoading(true);
     try {
-      // Create user with Clerk
-      const result = await signUp?.create({
+      // Start the sign-up process
+      await signUp.create({
         emailAddress: formData.email,
         password: formData.password,
-        firstName: formData.name.split(' ')[0],
-        lastName: formData.name.split(' ').slice(1).join(' '),
-        unsafeMetadata: {
-          phone: formData.phone,
-        },
       });
 
-      // Prepare session
-      await signUp?.prepareEmailAddressVerification({ strategy: 'email_code' });
+      // Start the email verification process
+      await signUp.prepareEmailAddressVerification();
 
-      // Create user profile in backend
-      await api.post(endpoints.auth.register, {
-        clerkId: result?.createdUserId,
+      // Store the user data for after verification
+      const userData = {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
         address: {
-          street: formData.address,
-          city: formData.city,
-          state: formData.state,
-          zipCode: formData.zipCode,
+          street: formData.address || "",
+          city: formData.city || "",
+          state: formData.state || "",
+          zipCode: formData.zipCode || "",
         },
-        interests,
-        offerings,
+        interests: interests || [],
+        offerings: offerings || [],
+      };
+
+      console.log("Registration prepared successfully");
+
+      // Navigate to verification screen
+      router.push({
+        pathname: "/verify-email",
+        params: {
+          userData: JSON.stringify(userData),
+          email: formData.email,
+        },
       });
-
-      // Set active session
-      await setActive({ session: result?.createdSessionId });
-
-      Alert.alert(
-        'Success!',
-        'Your account has been created. Please verify your email.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/(tabs)/home'),
-          },
-        ]
-      );
     } catch (error: any) {
-      console.error('Registration error:', error);
-      Alert.alert(
-        'Registration Failed',
-        error.errors?.[0]?.message || error.message || 'Please try again'
-      );
+      console.error("Registration error:", error);
+      let errorMessage = "Registration failed. Please try again.";
+
+      if (error.errors && error.errors.length > 0) {
+        errorMessage = error.errors[0].longMessage || error.errors[0].message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert("Registration Failed", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -127,11 +139,21 @@ export default function OnboardingRegister() {
     router.back();
   };
 
+  if (!isLoaded) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Complete Your Profile</Text>
-        <Text style={styles.subtitle}>Just a few more details to get started</Text>
+        <Text style={styles.subtitle}>
+          Just a few more details to get started
+        </Text>
 
         <View style={styles.form}>
           <View style={styles.inputGroup}>
@@ -139,7 +161,7 @@ export default function OnboardingRegister() {
             <TextInput
               style={styles.input}
               value={formData.name}
-              onChangeText={(val) => handleChange('name', val)}
+              onChangeText={(val) => handleChange("name", val)}
               placeholder="John Doe"
               autoCapitalize="words"
             />
@@ -150,7 +172,7 @@ export default function OnboardingRegister() {
             <TextInput
               style={styles.input}
               value={formData.phone}
-              onChangeText={(val) => handleChange('phone', val)}
+              onChangeText={(val) => handleChange("phone", val)}
               placeholder="+1 234 567 8900"
               keyboardType="phone-pad"
             />
@@ -161,10 +183,11 @@ export default function OnboardingRegister() {
             <TextInput
               style={styles.input}
               value={formData.email}
-              onChangeText={(val) => handleChange('email', val)}
+              onChangeText={(val) => handleChange("email", val)}
               placeholder="john@example.com"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
 
@@ -173,7 +196,7 @@ export default function OnboardingRegister() {
             <TextInput
               style={styles.input}
               value={formData.address}
-              onChangeText={(val) => handleChange('address', val)}
+              onChangeText={(val) => handleChange("address", val)}
               placeholder="123 Main St"
             />
           </View>
@@ -184,7 +207,7 @@ export default function OnboardingRegister() {
               <TextInput
                 style={styles.input}
                 value={formData.city}
-                onChangeText={(val) => handleChange('city', val)}
+                onChangeText={(val) => handleChange("city", val)}
                 placeholder="New York"
               />
             </View>
@@ -194,7 +217,7 @@ export default function OnboardingRegister() {
               <TextInput
                 style={styles.input}
                 value={formData.state}
-                onChangeText={(val) => handleChange('state', val)}
+                onChangeText={(val) => handleChange("state", val)}
                 placeholder="NY"
                 maxLength={2}
                 autoCapitalize="characters"
@@ -207,7 +230,7 @@ export default function OnboardingRegister() {
             <TextInput
               style={styles.input}
               value={formData.zipCode}
-              onChangeText={(val) => handleChange('zipCode', val)}
+              onChangeText={(val) => handleChange("zipCode", val)}
               placeholder="10001"
               keyboardType="number-pad"
               maxLength={5}
@@ -219,10 +242,11 @@ export default function OnboardingRegister() {
             <TextInput
               style={styles.input}
               value={formData.password}
-              onChangeText={(val) => handleChange('password', val)}
+              onChangeText={(val) => handleChange("password", val)}
               placeholder="Min. 8 characters"
               secureTextEntry
               autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
 
@@ -231,10 +255,11 @@ export default function OnboardingRegister() {
             <TextInput
               style={styles.input}
               value={formData.confirmPassword}
-              onChangeText={(val) => handleChange('confirmPassword', val)}
+              onChangeText={(val) => handleChange("confirmPassword", val)}
               placeholder="Re-enter password"
               secureTextEntry
               autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
         </View>
@@ -256,7 +281,10 @@ export default function OnboardingRegister() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.registerButton, loading && styles.registerButtonDisabled]}
+              style={[
+                styles.registerButton,
+                loading && styles.registerButtonDisabled,
+              ]}
               onPress={handleRegister}
               disabled={loading}
             >
@@ -284,7 +312,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: SIZES.h2,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.primary,
     marginBottom: SIZES.sm,
   },
@@ -301,7 +329,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: SIZES.small,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text.primary,
     marginBottom: SIZES.xs,
   },
@@ -316,7 +344,7 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: SIZES.md,
   },
   halfWidth: {
@@ -327,8 +355,8 @@ const styles = StyleSheet.create({
     paddingBottom: SIZES.xl,
   },
   pagination: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     marginBottom: SIZES.lg,
   },
   dot: {
@@ -343,7 +371,7 @@ const styles = StyleSheet.create({
     width: 24,
   },
   buttonRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: SIZES.md,
   },
   backButton: {
@@ -351,7 +379,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     paddingVertical: SIZES.md,
     borderRadius: SIZES.radius,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 2,
     borderColor: COLORS.primary,
     ...SHADOWS.small,
@@ -359,14 +387,14 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: COLORS.primary,
     fontSize: SIZES.body,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   registerButton: {
     flex: 1,
     backgroundColor: COLORS.primary,
     paddingVertical: SIZES.md,
     borderRadius: SIZES.radius,
-    alignItems: 'center',
+    alignItems: "center",
     ...SHADOWS.medium,
   },
   registerButtonDisabled: {
@@ -375,6 +403,6 @@ const styles = StyleSheet.create({
   registerButtonText: {
     color: COLORS.white,
     fontSize: SIZES.body,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });

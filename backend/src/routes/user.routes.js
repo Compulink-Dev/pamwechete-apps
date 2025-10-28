@@ -11,6 +11,7 @@ router.post("/logout", userController.logout);
 // Protected routes
 router.use(requireAuth);
 router.get("/verify-token", userController.verifyToken);
+router.get("/profile", userController.getCurrentUser);
 router.get("/me", userController.getCurrentUser);
 
 module.exports = router;

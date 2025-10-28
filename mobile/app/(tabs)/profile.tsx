@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,16 +8,47 @@ import {
   SafeAreaView,
   Image,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useUser, useClerk } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { COLORS, SIZES, SHADOWS } from "../../constants/theme";
+import { COLORS, SIZES, SHADOWS, FONTS } from "../../constants/theme";
+import api, { endpoints } from "../../utils/api";
+
+interface UserStats {
+  tradePoints: number;
+  rating: { average: number };
+  completedTrades: number;
+}
 
 export default function ProfileScreen() {
   const { user } = useUser();
   const { signOut } = useClerk();
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isVerified, setIsVerified] = useState(false);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await api.get(endpoints.users.profile);
+      const userData = response.data.user;
+      setUserStats({
+        tradePoints: userData.tradePoints || 0,
+        rating: userData.rating || { average: 0 },
+        completedTrades: userData.completedTrades || 0,
+      });
+      setIsVerified(userData.verification?.phone && userData.verification?.identity);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSignOut = async () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -106,22 +137,26 @@ export default function ProfileScreen() {
             {user?.primaryEmailAddress?.emailAddress}
           </Text>
 
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>1250</Text>
-              <Text style={styles.statLabel}>TP</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: SIZES.md }} />
+          ) : (
+            <View style={styles.statsRow}>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{userStats?.tradePoints || 0}</Text>
+                <Text style={styles.statLabel}>TP</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{userStats?.rating?.average?.toFixed(1) || '0.0'}</Text>
+                <Text style={styles.statLabel}>Rating</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{userStats?.completedTrades || 0}</Text>
+                <Text style={styles.statLabel}>Trades</Text>
+              </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>4.8</Text>
-              <Text style={styles.statLabel}>Rating</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>15</Text>
-              <Text style={styles.statLabel}>Trades</Text>
-            </View>
-          </View>
+          )}
 
           <TouchableOpacity style={styles.editButton}>
             <Text style={styles.editButtonText}>Edit Profile</Text>
