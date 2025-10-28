@@ -5,12 +5,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Image,
   Modal,
   TextInput,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SIZES, SHADOWS, FONTS } from "../../constants/theme";
@@ -229,8 +229,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: SIZES.padding,
-    backgroundColor: COLORS.white,
-    ...SHADOWS.small,
   },
   headerLeft: {
     flexDirection: "row",
@@ -238,8 +236,8 @@ const styles = StyleSheet.create({
     gap: SIZES.sm,
   },
   logo: {
-    width: 40,
-    height: 40,
+    width: 60,
+    height: 60,
   },
   welcomeText: {
     fontSize: SIZES.small,

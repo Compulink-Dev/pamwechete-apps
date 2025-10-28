@@ -13,5 +13,6 @@ router.use(requireAuth);
 router.get("/verify-token", userController.verifyToken);
 router.get("/profile", userController.getCurrentUser);
 router.get("/me", userController.getCurrentUser);
+router.post("/sync", userController.syncUser);
 
 module.exports = router;

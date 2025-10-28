@@ -1,17 +1,17 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Image,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS, SIZES, SHADOWS } from "../../constants/theme";
 
-type TabType = 'pending' | 'active' | 'finished';
+type TabType = "pending" | "active" | "finished";
 
 interface Conversation {
   id: string;
@@ -31,39 +31,42 @@ interface Conversation {
 
 const mockConversations: Conversation[] = [
   {
-    id: '1',
-    user: { name: 'John Doe', avatar: 'https://via.placeholder.com/50' },
-    trade: { title: 'Samsung S24', image: 'https://via.placeholder.com/60' },
-    lastMessage: 'Is it still available?',
-    timestamp: '2m ago',
+    id: "1",
+    user: { name: "John Doe", avatar: "https://via.placeholder.com/50" },
+    trade: { title: "Samsung S24", image: "https://via.placeholder.com/60" },
+    lastMessage: "Is it still available?",
+    timestamp: "2m ago",
     unread: 2,
-    status: 'pending',
+    status: "pending",
   },
   {
-    id: '2',
-    user: { name: 'Jane Smith', avatar: 'https://via.placeholder.com/50' },
-    trade: { title: 'Designer Handbag', image: 'https://via.placeholder.com/60' },
-    lastMessage: 'Great! When can we meet?',
-    timestamp: '1h ago',
+    id: "2",
+    user: { name: "Jane Smith", avatar: "https://via.placeholder.com/50" },
+    trade: {
+      title: "Designer Handbag",
+      image: "https://via.placeholder.com/60",
+    },
+    lastMessage: "Great! When can we meet?",
+    timestamp: "1h ago",
     unread: 0,
-    status: 'active',
+    status: "active",
   },
   {
-    id: '3',
-    user: { name: 'Mike Johnson', avatar: 'https://via.placeholder.com/50' },
-    trade: { title: 'Gaming Console', image: 'https://via.placeholder.com/60' },
-    lastMessage: 'Trade completed successfully!',
-    timestamp: '2d ago',
+    id: "3",
+    user: { name: "Mike Johnson", avatar: "https://via.placeholder.com/50" },
+    trade: { title: "Gaming Console", image: "https://via.placeholder.com/60" },
+    lastMessage: "Trade completed successfully!",
+    timestamp: "2d ago",
     unread: 0,
-    status: 'finished',
+    status: "finished",
   },
 ];
 
 export default function InboxScreen() {
-  const [activeTab, setActiveTab] = useState<TabType>('pending');
+  const [activeTab, setActiveTab] = useState<TabType>("pending");
 
   const filteredConversations = mockConversations.filter(
-    conv => conv.status === activeTab
+    (conv) => conv.status === activeTab
   );
 
   const renderConversationCard = (conversation: Conversation) => (
@@ -111,55 +114,57 @@ export default function InboxScreen() {
       {/* Tabs */}
       <View style={styles.tabs}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
-          onPress={() => setActiveTab('pending')}
+          style={[styles.tab, activeTab === "pending" && styles.activeTab]}
+          onPress={() => setActiveTab("pending")}
         >
           <Text
             style={[
               styles.tabText,
-              activeTab === 'pending' && styles.activeTabText,
+              activeTab === "pending" && styles.activeTabText,
             ]}
           >
             Pending
           </Text>
-          {mockConversations.filter(c => c.status === 'pending').length > 0 && (
+          {mockConversations.filter((c) => c.status === "pending").length >
+            0 && (
             <View style={styles.tabBadge}>
               <Text style={styles.tabBadgeText}>
-                {mockConversations.filter(c => c.status === 'pending').length}
+                {mockConversations.filter((c) => c.status === "pending").length}
               </Text>
             </View>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'active' && styles.activeTab]}
-          onPress={() => setActiveTab('active')}
+          style={[styles.tab, activeTab === "active" && styles.activeTab]}
+          onPress={() => setActiveTab("active")}
         >
           <Text
             style={[
               styles.tabText,
-              activeTab === 'active' && styles.activeTabText,
+              activeTab === "active" && styles.activeTabText,
             ]}
           >
             Active
           </Text>
-          {mockConversations.filter(c => c.status === 'active').length > 0 && (
+          {mockConversations.filter((c) => c.status === "active").length >
+            0 && (
             <View style={styles.tabBadge}>
               <Text style={styles.tabBadgeText}>
-                {mockConversations.filter(c => c.status === 'active').length}
+                {mockConversations.filter((c) => c.status === "active").length}
               </Text>
             </View>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'finished' && styles.activeTab]}
-          onPress={() => setActiveTab('finished')}
+          style={[styles.tab, activeTab === "finished" && styles.activeTab]}
+          onPress={() => setActiveTab("finished")}
         >
           <Text
             style={[
               styles.tabText,
-              activeTab === 'finished' && styles.activeTabText,
+              activeTab === "finished" && styles.activeTabText,
             ]}
           >
             Finished
@@ -199,30 +204,27 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: SIZES.padding,
-    backgroundColor: COLORS.white,
-    ...SHADOWS.small,
   },
   headerTitle: {
     fontSize: SIZES.h3,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.text.primary,
   },
   tabs: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.white,
+    flexDirection: "row",
     paddingHorizontal: SIZES.padding,
     paddingVertical: SIZES.sm,
     gap: SIZES.sm,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: SIZES.sm,
     paddingHorizontal: SIZES.md,
     borderRadius: SIZES.radius,
@@ -234,7 +236,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: SIZES.small,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text.secondary,
   },
   activeTabText: {
@@ -245,14 +247,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     minWidth: 20,
     height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 6,
   },
   tabBadgeText: {
     color: COLORS.white,
     fontSize: SIZES.tiny,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   scrollView: {
     flex: 1,
@@ -261,7 +263,7 @@ const styles = StyleSheet.create({
     padding: SIZES.padding,
   },
   conversationCard: {
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: COLORS.white,
     borderRadius: SIZES.cardRadius,
     padding: SIZES.md,
@@ -280,13 +282,13 @@ const styles = StyleSheet.create({
     marginRight: SIZES.md,
   },
   conversationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: SIZES.xs,
   },
   userName: {
     fontSize: SIZES.body,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.text.primary,
   },
   timestamp: {
@@ -299,9 +301,9 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.xs,
   },
   messageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   lastMessage: {
     fontSize: SIZES.small,
@@ -313,15 +315,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     minWidth: 24,
     height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 8,
     marginLeft: SIZES.sm,
   },
   unreadText: {
     color: COLORS.white,
     fontSize: SIZES.tiny,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   userAvatar: {
     width: 40,
@@ -330,13 +332,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.border,
   },
   emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: SIZES.xxl * 2,
   },
   emptyText: {
     fontSize: SIZES.body,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text.primary,
     marginTop: SIZES.md,
   },

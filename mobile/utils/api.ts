@@ -1,31 +1,28 @@
+// utils/api.js
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 console.log('🔌 Environment variables check:');
 console.log('EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
 console.log('Final API_URL:', API_URL);
-console.log('All env vars:', Object.keys(process.env).filter(key => key.includes('EXPO')));
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 15000, // Increased timeout
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor - will be enhanced by components with tokens
 api.interceptors.request.use(
   async (config) => {
     try {
-      const token = await SecureStore.getItemAsync('auth_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+      console.log('🔐 Making API request to:', config.url);
+      // Token will be added by components using getToken()
     } catch (error) {
-      console.warn('Error getting auth token:', error);
+      console.warn('Error in request interceptor:', error);
     }
     return config;
   },
@@ -46,19 +43,8 @@ api.interceptors.response.use(
       code: error.code,
       status: error.response?.status,
       url: error.config?.url,
+      data: error.response?.data,
     });
-    
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
-      SecureStore.deleteItemAsync('auth_token');
-    }
-    
-    // Handle network errors
-    if (error.code === 'ECONNABORTED') {
-      error.message = 'Request timeout. Please check your connection.';
-    } else if (!error.response) {
-      error.message = 'Network error. Please check your connection.';
-    }
     
     return Promise.reject(error);
   }
@@ -82,6 +68,7 @@ export const endpoints = {
     update: '/users/update',
     verification: '/users/verification',
     uploadDocument: '/users/verification/documents',
+    sync: '/users/sync',
   },
   
   // Trades

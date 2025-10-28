@@ -1,20 +1,28 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Image,
   TextInput,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS, SIZES, SHADOWS } from "../../constants/theme";
 
 const CATEGORIES = [
-  'All', 'Electronics', 'Fashion', 'Books', 'Sports', 'Art',
-  'Music', 'Gaming', 'Furniture', 'Other'
+  "All",
+  "Electronics",
+  "Fashion",
+  "Books",
+  "Sports",
+  "Art",
+  "Music",
+  "Gaming",
+  "Furniture",
+  "Other",
 ];
 
 interface Post {
@@ -38,38 +46,46 @@ interface Post {
 
 const mockPosts: Post[] = [
   {
-    id: '1',
-    user: { name: 'John Doe', avatar: 'https://via.placeholder.com/40', rating: 4.8 },
-    trade: {
-      title: 'Samsung S24',
-      category: 'Electronics',
-      images: ['https://via.placeholder.com/300'],
-      tradePoints: 167,
-      condition: 'Good',
+    id: "1",
+    user: {
+      name: "John Doe",
+      avatar: "https://via.placeholder.com/40",
+      rating: 4.8,
     },
-    timestamp: '2h ago',
+    trade: {
+      title: "Samsung S24",
+      category: "Electronics",
+      images: ["https://via.placeholder.com/300"],
+      tradePoints: 167,
+      condition: "Good",
+    },
+    timestamp: "2h ago",
     likes: 24,
     comments: 5,
   },
   {
-    id: '2',
-    user: { name: 'Jane Smith', avatar: 'https://via.placeholder.com/40', rating: 4.7 },
-    trade: {
-      title: 'Designer Handbag',
-      category: 'Fashion',
-      images: ['https://via.placeholder.com/300'],
-      tradePoints: 450,
-      condition: 'Excellent',
+    id: "2",
+    user: {
+      name: "Jane Smith",
+      avatar: "https://via.placeholder.com/40",
+      rating: 4.7,
     },
-    timestamp: '5h ago',
+    trade: {
+      title: "Designer Handbag",
+      category: "Fashion",
+      images: ["https://via.placeholder.com/300"],
+      tradePoints: 450,
+      condition: "Excellent",
+    },
+    timestamp: "5h ago",
     likes: 42,
     comments: 12,
   },
 ];
 
 export default function CommunityScreen() {
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const renderPost = (post: Post) => (
     <View key={post.id} style={styles.postCard}>
@@ -85,7 +101,11 @@ export default function CommunityScreen() {
           </View>
         </View>
         <TouchableOpacity>
-          <Ionicons name="ellipsis-horizontal" size={20} color={COLORS.text.secondary} />
+          <Ionicons
+            name="ellipsis-horizontal"
+            size={20}
+            color={COLORS.text.secondary}
+          />
         </TouchableOpacity>
       </View>
 
@@ -114,16 +134,26 @@ export default function CommunityScreen() {
       {/* Actions */}
       <View style={styles.postActions}>
         <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="heart-outline" size={24} color={COLORS.text.primary} />
+          <Ionicons
+            name="heart-outline"
+            size={24}
+            color={COLORS.text.primary}
+          />
           <Text style={styles.actionText}>{post.likes}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="chatbubble-outline" size={22} color={COLORS.text.primary} />
+          <Ionicons
+            name="chatbubble-outline"
+            size={22}
+            color={COLORS.text.primary}
+          />
           <Text style={styles.actionText}>{post.comments}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton}>
           <Ionicons name="swap-horizontal" size={24} color={COLORS.primary} />
-          <Text style={[styles.actionText, { color: COLORS.primary }]}>Trade</Text>
+          <Text style={[styles.actionText, { color: COLORS.primary }]}>
+            Trade
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -135,7 +165,11 @@ export default function CommunityScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Community</Text>
         <TouchableOpacity>
-          <Ionicons name="notifications-outline" size={24} color={COLORS.text.primary} />
+          <Ionicons
+            name="notifications-outline"
+            size={20}
+            color={COLORS.text.primary}
+          />
         </TouchableOpacity>
       </View>
 
@@ -202,29 +236,26 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: SIZES.padding,
-    backgroundColor: COLORS.white,
-    ...SHADOWS.small,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: SIZES.padding,
+    paddingVertical: 4,
   },
   headerTitle: {
     fontSize: SIZES.h3,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.text.primary,
   },
   searchContainer: {
-    flexDirection: 'row',
-    padding: SIZES.padding,
+    flexDirection: "row",
     gap: SIZES.sm,
-    backgroundColor: COLORS.white,
+    borderColor: COLORS.border,
   },
   searchBar: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: SIZES.radius,
     paddingHorizontal: SIZES.md,
     gap: SIZES.sm,
@@ -239,12 +270,10 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: SIZES.radius,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   categoriesScroll: {
-    backgroundColor: COLORS.white,
     maxHeight: 50,
   },
   categoriesContent: {
@@ -263,7 +292,7 @@ const styles = StyleSheet.create({
   },
   categoryChipText: {
     fontSize: SIZES.small,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text.secondary,
   },
   categoryChipTextActive: {
@@ -280,12 +309,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: SIZES.cardRadius,
     marginBottom: SIZES.md,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...SHADOWS.medium,
   },
   postHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: SIZES.md,
   },
   userAvatar: {
@@ -300,26 +329,26 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: SIZES.body,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text.primary,
   },
   ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     marginTop: 2,
   },
   ratingText: {
     fontSize: SIZES.tiny,
     color: COLORS.text.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   timestamp: {
     fontSize: SIZES.tiny,
     color: COLORS.text.secondary,
   },
   postImage: {
-    width: '100%',
+    width: "100%",
     height: 250,
     backgroundColor: COLORS.border,
   },
@@ -327,7 +356,7 @@ const styles = StyleSheet.create({
     padding: SIZES.md,
   },
   tradeHeader: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: SIZES.sm,
     marginBottom: SIZES.sm,
   },
@@ -340,7 +369,7 @@ const styles = StyleSheet.create({
   categoryText: {
     color: COLORS.white,
     fontSize: SIZES.tiny,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   conditionBadge: {
     backgroundColor: COLORS.success,
@@ -351,17 +380,17 @@ const styles = StyleSheet.create({
   conditionText: {
     color: COLORS.white,
     fontSize: SIZES.tiny,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   tradeTitle: {
     fontSize: SIZES.body,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.text.primary,
     marginBottom: SIZES.sm,
   },
   pointsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: SIZES.xs,
   },
   pointsLabel: {
@@ -370,11 +399,11 @@ const styles = StyleSheet.create({
   },
   pointsValue: {
     fontSize: SIZES.body,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.secondary,
   },
   postActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     paddingHorizontal: SIZES.md,
@@ -382,15 +411,15 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: SIZES.xs,
     paddingVertical: SIZES.xs,
   },
   actionText: {
     fontSize: SIZES.small,
     color: COLORS.text.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

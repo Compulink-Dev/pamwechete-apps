@@ -1,17 +1,17 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   Image,
   Dimensions,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS, SIZES, SHADOWS } from "../../constants/theme";
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = SCREEN_WIDTH - 40;
 
 interface TradeCard {
@@ -31,37 +31,37 @@ interface TradeCard {
 
 const mockTrades: TradeCard[] = [
   {
-    id: '1',
-    title: 'Samsung S24',
-    description: 'Great condition, barely used. Comes with original case.',
-    image: 'https://via.placeholder.com/400',
+    id: "1",
+    title: "Samsung S24",
+    description: "Great condition, barely used. Comes with original case.",
+    image: "https://via.placeholder.com/400",
     tradePoints: 167,
-    location: 'New York, NY',
-    distance: '4 miles away',
-    condition: 'Good',
-    owner: { name: 'John Doe', rating: 4.8 },
+    location: "New York, NY",
+    distance: "4 miles away",
+    condition: "Good",
+    owner: { name: "John Doe", rating: 4.8 },
   },
   {
-    id: '2',
-    title: 'Designer Handbag',
-    description: 'Authentic designer handbag from 2023 collection',
-    image: 'https://via.placeholder.com/400',
+    id: "2",
+    title: "Designer Handbag",
+    description: "Authentic designer handbag from 2023 collection",
+    image: "https://via.placeholder.com/400",
     tradePoints: 450,
-    location: 'Brooklyn, NY',
-    distance: '8 miles away',
-    condition: 'Excellent',
-    owner: { name: 'Jane Smith', rating: 4.7 },
+    location: "Brooklyn, NY",
+    distance: "8 miles away",
+    condition: "Excellent",
+    owner: { name: "Jane Smith", rating: 4.7 },
   },
   {
-    id: '3',
-    title: 'Gaming Console',
-    description: 'Like new gaming console with 2 controllers',
-    image: 'https://via.placeholder.com/400',
+    id: "3",
+    title: "Gaming Console",
+    description: "Like new gaming console with 2 controllers",
+    image: "https://via.placeholder.com/400",
     tradePoints: 300,
-    location: 'Queens, NY',
-    distance: '12 miles away',
-    condition: 'Like New',
-    owner: { name: 'Mike Johnson', rating: 4.9 },
+    location: "Queens, NY",
+    distance: "12 miles away",
+    condition: "Like New",
+    owner: { name: "Mike Johnson", rating: 4.9 },
   },
 ];
 
@@ -103,7 +103,9 @@ export default function SearchScreen() {
         <View style={styles.emptyState}>
           <Ionicons name="cube-outline" size={64} color={COLORS.text.light} />
           <Text style={styles.emptyText}>No more trades</Text>
-          <Text style={styles.emptySubtext}>Check back later for new items</Text>
+          <Text style={styles.emptySubtext}>
+            Check back later for new items
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -131,7 +133,11 @@ export default function SearchScreen() {
           <Text style={styles.activeModeText}>In-Person</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.modeButton}>
-          <Ionicons name="globe-outline" size={16} color={COLORS.text.secondary} />
+          <Ionicons
+            name="globe-outline"
+            size={16}
+            color={COLORS.text.secondary}
+          />
           <Text style={styles.modeText}>Online</Text>
         </TouchableOpacity>
       </View>
@@ -145,8 +151,11 @@ export default function SearchScreen() {
 
         {/* Current card */}
         <View style={styles.card}>
-          <Image source={{ uri: currentTrade.image }} style={styles.cardImage} />
-          
+          <Image
+            source={{ uri: currentTrade.image }}
+            style={styles.cardImage}
+          />
+
           {/* Condition badge */}
           <View style={styles.conditionBadge}>
             <Text style={styles.conditionText}>{currentTrade.condition}</Text>
@@ -157,7 +166,9 @@ export default function SearchScreen() {
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>{currentTrade.title}</Text>
               <View style={styles.pointsBadge}>
-                <Text style={styles.pointsText}>{currentTrade.tradePoints} TP</Text>
+                <Text style={styles.pointsText}>
+                  {currentTrade.tradePoints} TP
+                </Text>
               </View>
             </View>
 
@@ -177,8 +188,12 @@ export default function SearchScreen() {
 
               <View style={styles.ratingRow}>
                 <Ionicons name="star" size={16} color={COLORS.secondary} />
-                <Text style={styles.ratingText}>{currentTrade.owner.rating}</Text>
-                <Text style={styles.ownerText}>• {currentTrade.owner.name}</Text>
+                <Text style={styles.ratingText}>
+                  {currentTrade.owner.rating}
+                </Text>
+                <Text style={styles.ownerText}>
+                  • {currentTrade.owner.name}
+                </Text>
               </View>
             </View>
           </View>
@@ -192,7 +207,11 @@ export default function SearchScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.infoButton}>
-          <Ionicons name="information-circle-outline" size={28} color={COLORS.primary} />
+          <Ionicons
+            name="information-circle-outline"
+            size={28}
+            color={COLORS.primary}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.likeButton} onPress={handleLike}>
@@ -216,34 +235,31 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: SIZES.padding,
-    backgroundColor: COLORS.white,
-    ...SHADOWS.small,
   },
   headerTitle: {
     fontSize: SIZES.h3,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.text.primary,
   },
   instructions: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: SIZES.small,
     color: COLORS.text.secondary,
-    marginTop: SIZES.md,
   },
   modeSelector: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     gap: SIZES.sm,
     paddingHorizontal: SIZES.padding,
-    marginTop: SIZES.md,
+    marginTop: 2,
   },
   modeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SIZES.md,
     paddingVertical: SIZES.sm,
     borderRadius: SIZES.radius,
@@ -257,40 +273,40 @@ const styles = StyleSheet.create({
   modeText: {
     fontSize: SIZES.small,
     color: COLORS.text.secondary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   activeModeText: {
     fontSize: SIZES.small,
     color: COLORS.white,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   cardContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: SIZES.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 30,
   },
   card: {
     width: CARD_WIDTH,
     height: CARD_WIDTH * 1.4,
     backgroundColor: COLORS.white,
     borderRadius: SIZES.cardRadius * 1.5,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...SHADOWS.large,
   },
   cardBehind: {
-    position: 'absolute',
+    position: "absolute",
     top: -10,
     opacity: 0.5,
     transform: [{ scale: 0.95 }],
   },
   cardImage: {
-    width: '100%',
-    height: '60%',
+    width: "100%",
+    height: "60%",
     backgroundColor: COLORS.border,
   },
   conditionBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: SIZES.md,
     right: SIZES.md,
     backgroundColor: COLORS.success,
@@ -301,20 +317,20 @@ const styles = StyleSheet.create({
   conditionText: {
     color: COLORS.white,
     fontSize: SIZES.tiny,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   cardInfo: {
     padding: SIZES.padding,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: SIZES.sm,
   },
   cardTitle: {
     fontSize: SIZES.h4,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.text.primary,
     flex: 1,
   },
@@ -327,7 +343,7 @@ const styles = StyleSheet.create({
   pointsText: {
     color: COLORS.white,
     fontSize: SIZES.small,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   cardDescription: {
     fontSize: SIZES.small,
@@ -336,13 +352,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   locationText: {
@@ -350,23 +366,23 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
   },
   ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   ratingText: {
     fontSize: SIZES.tiny,
     color: COLORS.text.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   ownerText: {
     fontSize: SIZES.tiny,
     color: COLORS.text.secondary,
   },
   actions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     gap: SIZES.xl,
     paddingVertical: SIZES.xl,
   },
@@ -375,8 +391,8 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     backgroundColor: COLORS.white,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
     borderColor: COLORS.error,
     ...SHADOWS.medium,
@@ -386,8 +402,8 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     backgroundColor: COLORS.white,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
     borderColor: COLORS.success,
     ...SHADOWS.medium,
@@ -397,12 +413,12 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     backgroundColor: COLORS.white,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     ...SHADOWS.small,
   },
   progressContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingBottom: SIZES.md,
   },
   progressText: {
@@ -411,12 +427,12 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyText: {
     fontSize: SIZES.body,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text.primary,
     marginTop: SIZES.md,
   },

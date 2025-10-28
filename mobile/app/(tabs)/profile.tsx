@@ -1,3 +1,4 @@
+// app/(tabs)/profile.tsx
 import { useState, useEffect } from "react";
 import {
   View,
@@ -5,50 +6,121 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Image,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
-import { useUser, useClerk } from "@clerk/clerk-expo";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useUser, useClerk, useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { COLORS, SIZES, SHADOWS, FONTS } from "../../constants/theme";
 import api, { endpoints } from "../../utils/api";
+import { useApi } from "../../hooks/useApi"; // Import the custom hook
 
 interface UserStats {
   tradePoints: number;
   rating: { average: number };
   completedTrades: number;
+  activeTrades: number;
 }
 
 export default function ProfileScreen() {
-  const { user } = useUser();
+  const { user: clerkUser, isLoaded } = useUser();
   const { signOut } = useClerk();
+  const { getToken } = useAuth();
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchUserProfile();
-  }, []);
+  // Function to make authenticated API calls
+  const makeAuthenticatedRequest = async (config: any) => {
+    try {
+      const token = await getToken();
+      if (token) {
+        config.headers = {
+          ...config.headers,
+          Authorization: `Bearer ${token}`,
+        };
+      }
+      return api(config);
+    } catch (error) {
+      throw error;
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {
-      const response = await api.get(endpoints.users.profile);
+      setError(null);
+      console.log("🔄 Fetching user profile...");
+
+      const response = await makeAuthenticatedRequest({
+        method: "GET",
+        url: endpoints.users.profile,
+      });
+
       const userData = response.data.user;
+
+      console.log("✅ Profile data received:", userData);
+
       setUserStats({
         tradePoints: userData.tradePoints || 0,
         rating: userData.rating || { average: 0 },
         completedTrades: userData.completedTrades || 0,
+        activeTrades: userData.activeTrades || 0,
       });
-      setIsVerified(userData.verification?.phone && userData.verification?.identity);
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
+      setIsVerified(userData.isVerified || false);
+    } catch (error: any) {
+      console.error("❌ Error fetching user profile:", error);
+
+      if (error.response?.status === 401) {
+        setError("Authentication failed. Please sign in again.");
+      } else if (error.response?.status === 404) {
+        setError("Profile not found. Please complete registration.");
+        // Auto-sync user if not found
+        syncUser();
+      } else {
+        setError("Failed to load profile. Please try again.");
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const syncUser = async () => {
+    try {
+      console.log("🔄 Syncing user with backend...");
+      await makeAuthenticatedRequest({
+        method: "POST",
+        url: endpoints.users.sync,
+        data: {
+          clerkId: clerkUser?.id,
+          name: clerkUser?.fullName,
+          email: clerkUser?.primaryEmailAddress?.emailAddress,
+          phone: clerkUser?.primaryPhoneNumber?.phoneNumber,
+        },
+      });
+      // Retry fetching profile after sync
+      fetchUserProfile();
+    } catch (syncError) {
+      console.error("❌ Sync failed:", syncError);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchUserProfile();
+  };
+
+  useEffect(() => {
+    if (isLoaded && clerkUser) {
+      fetchUserProfile();
+    }
+  }, [isLoaded, clerkUser]);
 
   const handleSignOut = async () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -67,7 +139,7 @@ export default function ProfileScreen() {
   const handleVerifyAccount = () => {
     Alert.alert(
       "Verify Account",
-      "To start trading, you need to verify your account by uploading:\\n\\n• Valid ID (Driver\\'s License, Passport, or ID)\\n• Proof of Residence (optional)\\n• Phone Verification'",
+      "To start trading, you need to verify your account by uploading:\n\n• Valid ID (Driver's License, Passport, or ID)\n• Proof of Residence (optional)\n• Phone Verification",
       [
         { text: "Later", style: "cancel" },
         {
@@ -80,9 +152,33 @@ export default function ProfileScreen() {
     );
   };
 
+  // Error state component
+  if (error && !loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="warning-outline" size={64} color={COLORS.error} />
+          <Text style={styles.errorTitle}>Unable to Load Profile</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={fetchUserProfile}
+          >
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Profile</Text>
@@ -92,7 +188,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Verification Alert */}
-        {!isVerified && (
+        {!isVerified && !loading && (
           <TouchableOpacity
             style={styles.verificationAlert}
             onPress={handleVerifyAccount}
@@ -117,7 +213,7 @@ export default function ProfileScreen() {
           <View style={styles.avatarContainer}>
             <Image
               source={{
-                uri: user?.imageUrl || "https://via.placeholder.com/100",
+                uri: clerkUser?.imageUrl || "https://via.placeholder.com/100",
               }}
               style={styles.avatar}
             />
@@ -132,27 +228,39 @@ export default function ProfileScreen() {
             )}
           </View>
 
-          <Text style={styles.profileName}>{user?.fullName || "Trader"}</Text>
+          <Text style={styles.profileName}>
+            {clerkUser?.fullName || "Trader"}
+          </Text>
           <Text style={styles.profileEmail}>
-            {user?.primaryEmailAddress?.emailAddress}
+            {clerkUser?.primaryEmailAddress?.emailAddress}
           </Text>
 
           {loading ? (
-            <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: SIZES.md }} />
+            <ActivityIndicator
+              size="small"
+              color={COLORS.primary}
+              style={{ marginVertical: SIZES.md }}
+            />
           ) : (
             <View style={styles.statsRow}>
               <View style={styles.stat}>
-                <Text style={styles.statValue}>{userStats?.tradePoints || 0}</Text>
+                <Text style={styles.statValue}>
+                  {userStats?.tradePoints || 0}
+                </Text>
                 <Text style={styles.statLabel}>TP</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.stat}>
-                <Text style={styles.statValue}>{userStats?.rating?.average?.toFixed(1) || '0.0'}</Text>
+                <Text style={styles.statValue}>
+                  {userStats?.rating?.average?.toFixed(1) || "0.0"}
+                </Text>
                 <Text style={styles.statLabel}>Rating</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.stat}>
-                <Text style={styles.statValue}>{userStats?.completedTrades || 0}</Text>
+                <Text style={styles.statValue}>
+                  {userStats?.completedTrades || 0}
+                </Text>
                 <Text style={styles.statLabel}>Trades</Text>
               </View>
             </View>
@@ -163,180 +271,197 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Menu Items */}
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Account</Text>
+        {/* Only show menu items when not loading and no error */}
+        {!loading && !error && (
+          <>
+            {/* Menu Items */}
+            <View style={styles.menuSection}>
+              <Text style={styles.sectionTitle}>Account</Text>
 
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons
-                name="person-outline"
-                size={22}
-                color={COLORS.primary}
-              />
-              <Text style={styles.menuItemText}>Personal Information</Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={COLORS.text.secondary}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleVerifyAccount}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={22}
-                color={COLORS.primary}
-              />
-              <Text style={styles.menuItemText}>Verification</Text>
-            </View>
-            <View style={styles.menuItemRight}>
-              {!isVerified && (
-                <View style={styles.pendingBadge}>
-                  <Text style={styles.pendingText}>Pending</Text>
+              <TouchableOpacity style={styles.menuItem}>
+                <View style={styles.menuItemLeft}>
+                  <Ionicons
+                    name="person-outline"
+                    size={22}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.menuItemText}>Personal Information</Text>
                 </View>
-              )}
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={COLORS.text.secondary}
-              />
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={COLORS.text.secondary}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={handleVerifyAccount}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={22}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.menuItemText}>Verification</Text>
+                </View>
+                <View style={styles.menuItemRight}>
+                  {!isVerified && (
+                    <View style={styles.pendingBadge}>
+                      <Text style={styles.pendingText}>Pending</Text>
+                    </View>
+                  )}
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color={COLORS.text.secondary}
+                  />
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.menuItem}>
+                <View style={styles.menuItemLeft}>
+                  <Ionicons
+                    name="location-outline"
+                    size={22}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.menuItemText}>Address</Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={COLORS.text.secondary}
+                />
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons
-                name="location-outline"
-                size={22}
-                color={COLORS.primary}
-              />
-              <Text style={styles.menuItemText}>Address</Text>
+            <View style={styles.menuSection}>
+              <Text style={styles.sectionTitle}>Trading</Text>
+
+              <TouchableOpacity style={styles.menuItem}>
+                <View style={styles.menuItemLeft}>
+                  <Ionicons
+                    name="cube-outline"
+                    size={22}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.menuItemText}>My Trades</Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={COLORS.text.secondary}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.menuItem}>
+                <View style={styles.menuItemLeft}>
+                  <Ionicons
+                    name="heart-outline"
+                    size={22}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.menuItemText}>Wishlist</Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={COLORS.text.secondary}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.menuItem}>
+                <View style={styles.menuItemLeft}>
+                  <Ionicons
+                    name="time-outline"
+                    size={22}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.menuItemText}>Trade History</Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={COLORS.text.secondary}
+                />
+              </TouchableOpacity>
             </View>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={COLORS.text.secondary}
-            />
-          </TouchableOpacity>
-        </View>
 
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Trading</Text>
+            <View style={styles.menuSection}>
+              <Text style={styles.sectionTitle}>Settings</Text>
 
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="cube-outline" size={22} color={COLORS.primary} />
-              <Text style={styles.menuItemText}>My Trades</Text>
+              <TouchableOpacity style={styles.menuItem}>
+                <View style={styles.menuItemLeft}>
+                  <Ionicons
+                    name="notifications-outline"
+                    size={22}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.menuItemText}>Notifications</Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={COLORS.text.secondary}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.menuItem}>
+                <View style={styles.menuItemLeft}>
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={22}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.menuItemText}>Privacy & Security</Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={COLORS.text.secondary}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.menuItem}>
+                <View style={styles.menuItemLeft}>
+                  <Ionicons
+                    name="help-circle-outline"
+                    size={22}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.menuItemText}>Help & Support</Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={COLORS.text.secondary}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.menuItem}>
+                <View style={styles.menuItemLeft}>
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={22}
+                    color={COLORS.primary}
+                  />
+                  <Text style={styles.menuItemText}>About</Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={COLORS.text.secondary}
+                />
+              </TouchableOpacity>
             </View>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={COLORS.text.secondary}
-            />
-          </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="heart-outline" size={22} color={COLORS.primary} />
-              <Text style={styles.menuItemText}>Wishlist</Text>
+            <View style={styles.footer}>
+              <Text style={styles.version}>Version 1.0.0</Text>
             </View>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={COLORS.text.secondary}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="time-outline" size={22} color={COLORS.primary} />
-              <Text style={styles.menuItemText}>Trade History</Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={COLORS.text.secondary}
-            />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons
-                name="notifications-outline"
-                size={22}
-                color={COLORS.primary}
-              />
-              <Text style={styles.menuItemText}>Notifications</Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={COLORS.text.secondary}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons
-                name="lock-closed-outline"
-                size={22}
-                color={COLORS.primary}
-              />
-              <Text style={styles.menuItemText}>Privacy & Security</Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={COLORS.text.secondary}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons
-                name="help-circle-outline"
-                size={22}
-                color={COLORS.primary}
-              />
-              <Text style={styles.menuItemText}>Help & Support</Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={COLORS.text.secondary}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons
-                name="information-circle-outline"
-                size={22}
-                color={COLORS.primary}
-              />
-              <Text style={styles.menuItemText}>About</Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={COLORS.text.secondary}
-            />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.version}>Version 1.0.0</Text>
-        </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -351,9 +476,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: SIZES.padding,
-    backgroundColor: COLORS.white,
-    ...SHADOWS.small,
+    paddingHorizontal: SIZES.padding,
+    paddingVertical: 4,
   },
   headerTitle: {
     fontSize: SIZES.h3,
@@ -508,5 +632,36 @@ const styles = StyleSheet.create({
   version: {
     fontSize: SIZES.small,
     color: COLORS.text.light,
+  },
+  // Add error styles
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: SIZES.padding,
+  },
+  errorTitle: {
+    fontSize: SIZES.h3,
+    fontWeight: "bold",
+    color: COLORS.text.primary,
+    marginTop: SIZES.md,
+    marginBottom: SIZES.sm,
+  },
+  errorMessage: {
+    fontSize: SIZES.body,
+    color: COLORS.text.secondary,
+    textAlign: "center",
+    marginBottom: SIZES.xl,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SIZES.xl,
+    paddingVertical: SIZES.md,
+    borderRadius: SIZES.radius,
+  },
+  retryButtonText: {
+    color: COLORS.white,
+    fontSize: SIZES.body,
+    fontWeight: "bold",
   },
 });

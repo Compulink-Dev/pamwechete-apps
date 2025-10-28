@@ -146,30 +146,98 @@ exports.verifyToken = async (req, res) => {
 };
 
 /**
- * Get current user
+ * Get current user profile
  */
 exports.getCurrentUser = async (req, res) => {
   try {
+    console.log("👤 Getting user profile for:", req.auth.userId);
+
     const user = await User.findOne({ clerkId: req.auth.userId }).select(
-      "-__v"
+      "-__v -updatedAt"
     );
 
     if (!user) {
+      console.log("❌ User not found in database");
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: "User not found. Please complete registration.",
       });
     }
 
+    console.log("✅ User found:", user.name);
+
     res.json({
       success: true,
-      user,
+      user: {
+        id: user._id,
+        clerkId: user.clerkId,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+        tradePoints: user.tradePoints || 0,
+        rating: user.rating || { average: 0, count: 0 },
+        completedTrades: user.completedTrades || 0,
+        activeTrades: user.activeTrades || 0,
+        isVerified: user.isVerified || false,
+        verification: user.verification || {},
+        createdAt: user.createdAt,
+      },
     });
   } catch (error) {
     console.error("Get current user error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to get user",
+      message: "Failed to get user profile",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Create or sync user from Clerk
+ */
+exports.syncUser = async (req, res) => {
+  try {
+    const { clerkId, name, email, phone } = req.body;
+
+    console.log("🔄 Syncing user:", { clerkId, name, email });
+
+    let user = await User.findOne({ clerkId: req.auth.userId });
+
+    if (!user) {
+      // Create new user
+      user = new User({
+        clerkId: req.auth.userId,
+        name: name || "Trader",
+        email: email,
+        phone: phone,
+        tradePoints: 100, // Starting points
+        isVerified: false,
+      });
+
+      await user.save();
+      console.log("✅ New user created:", user.name);
+    } else {
+      console.log("✅ Existing user found:", user.name);
+    }
+
+    res.json({
+      success: true,
+      message: "User synced successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isVerified: user.isVerified,
+        tradePoints: user.tradePoints,
+      },
+    });
+  } catch (error) {
+    console.error("Sync user error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to sync user",
       error: error.message,
     });
   }
