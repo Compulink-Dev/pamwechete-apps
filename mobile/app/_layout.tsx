@@ -5,6 +5,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { View, ActivityIndicator, StatusBar } from "react-native";
 import { COLORS } from "../constants/theme";
+import useCustomFonts from "../hooks/useFonts";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -28,6 +29,17 @@ const tokenCache = {
 
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
+  const fontsLoaded = useCustomFonts();
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null; // or a loading component
+  }
 
   useEffect(() => {
     async function prepare() {

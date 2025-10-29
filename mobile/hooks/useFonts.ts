@@ -11,6 +11,10 @@ export default function useAppFonts() {
     'Rubik_500Medium': require('../assets/fonts/Rubik-Medium.ttf'),
     'Rubik_600SemiBold': require('../assets/fonts/Rubik-SemiBold.ttf'),
     'Rubik_700Bold': require('../assets/fonts/Rubik-Bold.ttf'),
+    'Rubik-Regular': require('../assets/fonts/Rubik-Regular.ttf'),
+    'Rubik-Medium': require('../assets/fonts/Rubik-Medium.ttf'),
+    'Rubik-SemiBold': require('../assets/fonts/Rubik-SemiBold.ttf'),
+    'Rubik-Bold': require('../assets/fonts/Rubik-Bold.ttf'),
     // Add other font weights if needed
   });
 

@@ -7,14 +7,15 @@ import {
   ScrollView,
   Image,
   Modal,
-  TextInput,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SIZES, SHADOWS, FONTS } from "../../constants/theme";
-import api, { endpoints } from "../../utils/api";
+import api from "../../utils/api";
+import { endpoints } from "@/utils/authApi";
+import useCustomFonts from "../../hooks/useFonts"; // Add this import
 
 interface Trade {
   _id: string;
@@ -40,6 +41,9 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
 
+  // Add font loading
+  const fontsLoaded = useCustomFonts();
+
   useEffect(() => {
     fetchTrades();
   }, []);
@@ -54,6 +58,15 @@ export default function HomeScreen() {
       setLoading(false);
     }
   };
+
+  // Show loading while fonts are loading
+  if (!fontsLoaded) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
+    );
+  }
 
   const renderTradeCard = (trade: Trade) => (
     <TouchableOpacity key={trade._id} style={styles.tradeCard}>
@@ -254,7 +267,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: COLORS.primary,
     paddingHorizontal: SIZES.md,
-    paddingVertical: SIZES.sm,
+    paddingVertical: 6,
     borderRadius: SIZES.radius,
     gap: SIZES.xs,
   },

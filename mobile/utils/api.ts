@@ -1,7 +1,7 @@
 // utils/api.js
 import axios from 'axios';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://pamwechete-api.onrender.com//api';
 
 console.log('🔌 Environment variables check:');
 console.log('EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
@@ -15,7 +15,7 @@ const api = axios.create({
   },
 });
 
-// Request interceptor - will be enhanced by components with tokens
+// Request interceptor
 api.interceptors.request.use(
   async (config) => {
     try {
@@ -46,70 +46,13 @@ api.interceptors.response.use(
       data: error.response?.data,
     });
     
+    // Handle specific error cases
+    if (error.code === 'ERR_NETWORK') {
+      console.error('Network error - Check if server is running and accessible');
+    }
+    
     return Promise.reject(error);
   }
 );
 
 export default api;
-
-// API endpoints
-export const endpoints = {
-  // Auth
-  auth: {
-    register: '/auth/register',
-    login: '/auth/login',
-    logout: '/auth/logout',
-    verify: '/auth/verify',
-  },
-  
-  // Users
-  users: {
-    profile: '/users/profile',
-    update: '/users/update',
-    verification: '/users/verification',
-    uploadDocument: '/users/verification/documents',
-    sync: '/users/sync',
-  },
-  
-  // Trades
-  trades: {
-    list: '/trades',
-    create: '/trades',
-    details: (id: string) => `/trades/${id}`,
-    update: (id: string) => `/trades/${id}`,
-    delete: (id: string) => `/trades/${id}`,
-    search: '/trades/search',
-    recommendations: '/trades/recommendations',
-    wishlist: '/trades/wishlist',
-  },
-  
-  // Trade Requests
-  tradeRequests: {
-    create: '/trade-requests',
-    list: '/trade-requests',
-    details: (id: string) => `/trade-requests/${id}`,
-    accept: (id: string) => `/trade-requests/${id}/accept`,
-    reject: (id: string) => `/trade-requests/${id}/reject`,
-    complete: (id: string) => `/trade-requests/${id}/complete`,
-  },
-  
-  // Messages
-  messages: {
-    conversations: '/messages/conversations',
-    send: '/messages',
-    thread: (id: string) => `/messages/thread/${id}`,
-  },
-  
-  // Community
-  community: {
-    posts: '/community/posts',
-    create: '/community/posts',
-    like: (id: string) => `/community/posts/${id}/like`,
-    comment: (id: string) => `/community/posts/${id}/comment`,
-  },
-  
-  // Categories
-  categories: {
-    list: '/categories',
-  },
-};

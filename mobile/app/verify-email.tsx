@@ -12,7 +12,8 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { useSignUp } from "@clerk/clerk-expo";
 import { COLORS, SIZES, SHADOWS } from "../constants/theme";
-import api, { endpoints } from "../utils/api";
+import api from "../utils/api";
+import { endpoints } from "@/utils/authApi";
 
 export default function VerifyEmail() {
   const { signUp, setActive, isLoaded } = useSignUp();

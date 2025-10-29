@@ -16,8 +16,9 @@ import { useUser, useClerk, useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { COLORS, SIZES, SHADOWS, FONTS } from "../../constants/theme";
-import api, { endpoints } from "../../utils/api";
-import { useApi } from "../../hooks/useApi"; // Import the custom hook
+import api from "../../utils/api";
+import { endpoints } from "@/utils/authApi";
+import useAppFonts from "@/hooks/useFonts";
 
 interface UserStats {
   tradePoints: number;
@@ -27,6 +28,8 @@ interface UserStats {
 }
 
 export default function ProfileScreen() {
+  const { fontsLoaded } = useAppFonts();
+
   const { user: clerkUser, isLoaded } = useUser();
   const { signOut } = useClerk();
   const { getToken } = useAuth();
@@ -35,6 +38,16 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  if (!fontsLoaded) {
+    return (
+      <SafeAreaView
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      >
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
+    );
+  }
 
   // Function to make authenticated API calls
   const makeAuthenticatedRequest = async (config: any) => {
@@ -481,7 +494,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: SIZES.h3,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
     color: COLORS.text.primary,
   },
   verificationAlert: {
@@ -498,12 +511,13 @@ const styles = StyleSheet.create({
   },
   alertTitle: {
     fontSize: SIZES.body,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
     color: "#856404",
     marginBottom: 2,
   },
   alertText: {
     fontSize: SIZES.small,
+    fontFamily: "Rubik-Regular",
     color: "#856404",
   },
   profileCard: {
@@ -534,12 +548,13 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: SIZES.h3,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
     color: COLORS.text.primary,
     marginBottom: SIZES.xs,
   },
   profileEmail: {
     fontSize: SIZES.small,
+    fontFamily: "Rubik-Regular",
     color: COLORS.text.secondary,
     marginBottom: SIZES.lg,
   },
@@ -554,11 +569,12 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: SIZES.h3,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
     color: COLORS.primary,
   },
   statLabel: {
     fontSize: SIZES.small,
+    fontFamily: "Rubik-Regular",
     color: COLORS.text.secondary,
     marginTop: SIZES.xs,
   },
@@ -576,7 +592,7 @@ const styles = StyleSheet.create({
   },
   editButtonText: {
     fontSize: SIZES.body,
-    fontWeight: "600",
+    fontFamily: "Rubik-Medium",
     color: COLORS.primary,
   },
   menuSection: {
@@ -585,7 +601,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: SIZES.small,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
     color: COLORS.text.secondary,
     marginBottom: SIZES.sm,
     textTransform: "uppercase",
@@ -607,6 +623,7 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     fontSize: SIZES.body,
+    fontFamily: "Rubik-Regular",
     color: COLORS.text.primary,
   },
   menuItemRight: {
@@ -623,7 +640,7 @@ const styles = StyleSheet.create({
   pendingText: {
     fontSize: SIZES.tiny,
     color: COLORS.white,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
   },
   footer: {
     alignItems: "center",
@@ -631,6 +648,7 @@ const styles = StyleSheet.create({
   },
   version: {
     fontSize: SIZES.small,
+    fontFamily: "Rubik-Regular",
     color: COLORS.text.light,
   },
   // Add error styles
@@ -642,7 +660,7 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: SIZES.h3,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
     color: COLORS.text.primary,
     marginTop: SIZES.md,
     marginBottom: SIZES.sm,
@@ -650,6 +668,7 @@ const styles = StyleSheet.create({
   errorMessage: {
     fontSize: SIZES.body,
     color: COLORS.text.secondary,
+    fontFamily: "Rubik-Regular",
     textAlign: "center",
     marginBottom: SIZES.xl,
   },
@@ -662,6 +681,6 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: COLORS.white,
     fontSize: SIZES.body,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
   },
 });

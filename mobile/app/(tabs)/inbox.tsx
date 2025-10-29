@@ -6,10 +6,12 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SIZES, SHADOWS } from "../../constants/theme";
+import useAppFonts from "@/hooks/useFonts";
 
 type TabType = "pending" | "active" | "finished";
 
@@ -63,6 +65,16 @@ const mockConversations: Conversation[] = [
 ];
 
 export default function InboxScreen() {
+  const { fontsLoaded } = useAppFonts();
+
+  if (!fontsLoaded) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
+    );
+  }
+
   const [activeTab, setActiveTab] = useState<TabType>("pending");
 
   const filteredConversations = mockConversations.filter(
@@ -211,7 +223,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: SIZES.h3,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
     color: COLORS.text.primary,
   },
   tabs: {
@@ -236,11 +248,12 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: SIZES.small,
-    fontWeight: "600",
+    fontFamily: "Rubik-Medium",
     color: COLORS.text.secondary,
   },
   activeTabText: {
     color: COLORS.white,
+    fontFamily: "Rubik-Medium",
   },
   tabBadge: {
     backgroundColor: COLORS.secondary,
@@ -254,7 +267,7 @@ const styles = StyleSheet.create({
   tabBadgeText: {
     color: COLORS.white,
     fontSize: SIZES.tiny,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
   },
   scrollView: {
     flex: 1,
@@ -288,15 +301,17 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: SIZES.body,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
     color: COLORS.text.primary,
   },
   timestamp: {
     fontSize: SIZES.tiny,
+    fontFamily: "Rubik-Regular",
     color: COLORS.text.secondary,
   },
   tradeTitle: {
     fontSize: SIZES.small,
+    fontFamily: "Rubik-Medium",
     color: COLORS.text.secondary,
     marginBottom: SIZES.xs,
   },
@@ -307,6 +322,7 @@ const styles = StyleSheet.create({
   },
   lastMessage: {
     fontSize: SIZES.small,
+    fontFamily: "Rubik-Regular",
     color: COLORS.text.primary,
     flex: 1,
   },
@@ -323,7 +339,7 @@ const styles = StyleSheet.create({
   unreadText: {
     color: COLORS.white,
     fontSize: SIZES.tiny,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Regular",
   },
   userAvatar: {
     width: 40,
@@ -338,13 +354,14 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: SIZES.body,
-    fontWeight: "600",
+    fontFamily: "Rubik-Medium",
     color: COLORS.text.primary,
     marginTop: SIZES.md,
   },
   emptySubtext: {
     fontSize: SIZES.small,
     color: COLORS.text.secondary,
+    fontFamily: "Rubik-Regular",
     marginTop: SIZES.xs,
   },
 });

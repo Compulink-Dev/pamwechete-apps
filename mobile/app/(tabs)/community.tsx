@@ -7,10 +7,12 @@ import {
   ScrollView,
   Image,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SIZES, SHADOWS } from "../../constants/theme";
+import useAppFonts from "@/hooks/useFonts";
 
 const CATEGORIES = [
   "All",
@@ -86,6 +88,17 @@ const mockPosts: Post[] = [
 export default function CommunityScreen() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const { fontsLoaded } = useAppFonts();
+
+  if (!fontsLoaded) {
+    return (
+      <SafeAreaView
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      >
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
+    );
+  }
 
   const renderPost = (post: Post) => (
     <View key={post.id} style={styles.postCard}>
@@ -244,7 +257,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: SIZES.h3,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
     color: COLORS.text.primary,
   },
   searchContainer: {
@@ -263,6 +276,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     paddingVertical: SIZES.sm,
+    fontFamily: "Rubik-Regular",
     fontSize: SIZES.body,
     color: COLORS.text.primary,
   },
@@ -292,10 +306,12 @@ const styles = StyleSheet.create({
   },
   categoryChipText: {
     fontSize: SIZES.small,
-    fontWeight: "600",
+    fontFamily: "Rubik-Medium",
     color: COLORS.text.secondary,
   },
   categoryChipTextActive: {
+    fontSize: SIZES.small,
+    fontFamily: "Rubik-Medium",
     color: COLORS.white,
   },
   scrollView: {
@@ -329,7 +345,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: SIZES.body,
-    fontWeight: "600",
+    fontFamily: "Rubik-Medium",
     color: COLORS.text.primary,
   },
   ratingRow: {
@@ -341,10 +357,11 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: SIZES.tiny,
     color: COLORS.text.primary,
-    fontWeight: "600",
+    fontFamily: "Rubik-Medium",
   },
   timestamp: {
     fontSize: SIZES.tiny,
+    fontFamily: "Rubik-Regular",
     color: COLORS.text.secondary,
   },
   postImage: {
@@ -369,7 +386,7 @@ const styles = StyleSheet.create({
   categoryText: {
     color: COLORS.white,
     fontSize: SIZES.tiny,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
   },
   conditionBadge: {
     backgroundColor: COLORS.success,
@@ -380,11 +397,11 @@ const styles = StyleSheet.create({
   conditionText: {
     color: COLORS.white,
     fontSize: SIZES.tiny,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
   },
   tradeTitle: {
     fontSize: SIZES.body,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
     color: COLORS.text.primary,
     marginBottom: SIZES.sm,
   },
@@ -395,11 +412,12 @@ const styles = StyleSheet.create({
   },
   pointsLabel: {
     fontSize: SIZES.small,
+    fontFamily: "Rubik-Regular",
     color: COLORS.text.secondary,
   },
   pointsValue: {
     fontSize: SIZES.body,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
     color: COLORS.secondary,
   },
   postActions: {
@@ -420,6 +438,6 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: SIZES.small,
     color: COLORS.text.primary,
-    fontWeight: "600",
+    fontFamily: "Rubik-Medium",
   },
 });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -6,13 +6,18 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  ActivityIndicator,
+  Animated,
+  PanResponder,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SIZES, SHADOWS } from "../../constants/theme";
+import useAppFonts from "@/hooks/useFonts";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const CARD_WIDTH = SCREEN_WIDTH - 40;
+const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
 
 interface TradeCard {
   id: string;
@@ -65,9 +70,160 @@ const mockTrades: TradeCard[] = [
   },
 ];
 
+// SwipeCard Component
+interface SwipeCardProps {
+  trade: TradeCard;
+  onSwipeLeft?: () => void;
+  onSwipeRight?: () => void;
+  isActive?: boolean;
+}
+
+const SwipeCard = ({
+  trade,
+  onSwipeLeft,
+  onSwipeRight,
+  isActive = true,
+}: SwipeCardProps) => {
+  const position = useRef(new Animated.ValueXY()).current;
+
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => isActive,
+    onMoveShouldSetPanResponder: () => isActive,
+    onPanResponderMove: (_, gesture) => {
+      position.setValue({ x: gesture.dx, y: gesture.dy });
+    },
+    onPanResponderRelease: (_, gesture) => {
+      if (gesture.dx > SWIPE_THRESHOLD) {
+        // Swipe right
+        Animated.spring(position, {
+          toValue: { x: SCREEN_WIDTH + 100, y: gesture.dy },
+          useNativeDriver: true,
+        }).start(() => {
+          onSwipeRight?.();
+        });
+      } else if (gesture.dx < -SWIPE_THRESHOLD) {
+        // Swipe left
+        Animated.spring(position, {
+          toValue: { x: -SCREEN_WIDTH - 100, y: gesture.dy },
+          useNativeDriver: true,
+        }).start(() => {
+          onSwipeLeft?.();
+        });
+      } else {
+        // Return to center
+        Animated.spring(position, {
+          toValue: { x: 0, y: 0 },
+          friction: 4,
+          useNativeDriver: true,
+        }).start();
+      }
+    },
+  });
+
+  const rotate = position.x.interpolate({
+    inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
+    outputRange: ["-10deg", "0deg", "10deg"],
+    extrapolate: "clamp",
+  });
+
+  const likeOpacity = position.x.interpolate({
+    inputRange: [0, SWIPE_THRESHOLD],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
+  const nopeOpacity = position.x.interpolate({
+    inputRange: [-SWIPE_THRESHOLD, 0],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+
+  const cardStyle = {
+    transform: [
+      { translateX: position.x },
+      { translateY: position.y },
+      { rotate },
+    ],
+  };
+
+  return (
+    <Animated.View
+      style={[styles.card, cardStyle]}
+      {...panResponder.panHandlers}
+    >
+      {/* Like/Nope Overlay */}
+      <Animated.View
+        style={[styles.likeOverlay, { opacity: likeOpacity }]}
+        pointerEvents="none"
+      >
+        <Text style={styles.likeText}>LIKE</Text>
+      </Animated.View>
+
+      <Animated.View
+        style={[styles.nopeOverlay, { opacity: nopeOpacity }]}
+        pointerEvents="none"
+      >
+        <Text style={styles.nopeText}>NOPE</Text>
+      </Animated.View>
+
+      <Image source={{ uri: trade.image }} style={styles.cardImage} />
+
+      {/* Condition badge */}
+      <View style={styles.conditionBadge}>
+        <Text style={styles.conditionText}>{trade.condition}</Text>
+      </View>
+
+      {/* Card info */}
+      <View style={styles.cardInfo}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>{trade.title}</Text>
+          <View style={styles.pointsBadge}>
+            <Text style={styles.pointsText}>{trade.tradePoints} TP</Text>
+          </View>
+        </View>
+
+        <Text style={styles.cardDescription} numberOfLines={2}>
+          {trade.description}
+        </Text>
+
+        <View style={styles.cardFooter}>
+          <View style={styles.locationRow}>
+            <Ionicons
+              name="location-outline"
+              size={16}
+              color={COLORS.text.secondary}
+            />
+            <Text style={styles.locationText}>{trade.distance}</Text>
+          </View>
+
+          <View style={styles.ratingRow}>
+            <Ionicons name="star" size={16} color={COLORS.secondary} />
+            <Text style={styles.ratingText}>{trade.owner.rating}</Text>
+            <Text style={styles.ownerText}>• {trade.owner.name}</Text>
+          </View>
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
+
 export default function SearchScreen() {
+  const { fontsLoaded } = useAppFonts();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [likedTrades, setLikedTrades] = useState<string[]>([]);
+  const [activeMode, setActiveMode] = useState<"in-person" | "online">(
+    "in-person"
+  );
+
+  if (!fontsLoaded) {
+    return (
+      <SafeAreaView
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      >
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
+    );
+  }
 
   const currentTrade = mockTrades[currentIndex];
 
@@ -80,6 +236,16 @@ export default function SearchScreen() {
 
   const handlePass = () => {
     nextCard();
+  };
+
+  const handleSwipeRight = () => {
+    console.log("Interested in:", currentTrade?.title);
+    handleLike();
+  };
+
+  const handleSwipeLeft = () => {
+    console.log("Not interested in:", currentTrade?.title);
+    handlePass();
   };
 
   const nextCard = () => {
@@ -128,17 +294,51 @@ export default function SearchScreen() {
 
       {/* Trade Modes */}
       <View style={styles.modeSelector}>
-        <TouchableOpacity style={[styles.modeButton, styles.activeModeButton]}>
-          <Ionicons name="location" size={16} color={COLORS.white} />
-          <Text style={styles.activeModeText}>In-Person</Text>
+        <TouchableOpacity
+          style={[
+            styles.modeButton,
+            activeMode === "in-person" && styles.activeModeButton,
+          ]}
+          onPress={() => setActiveMode("in-person")}
+        >
+          <Ionicons
+            name="location"
+            size={16}
+            color={
+              activeMode === "in-person" ? COLORS.white : COLORS.text.secondary
+            }
+          />
+          <Text
+            style={
+              activeMode === "in-person"
+                ? styles.activeModeText
+                : styles.modeText
+            }
+          >
+            In-Person
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.modeButton}>
+        <TouchableOpacity
+          style={[
+            styles.modeButton,
+            activeMode === "online" && styles.activeModeButton,
+          ]}
+          onPress={() => setActiveMode("online")}
+        >
           <Ionicons
             name="globe-outline"
             size={16}
-            color={COLORS.text.secondary}
+            color={
+              activeMode === "online" ? COLORS.white : COLORS.text.secondary
+            }
           />
-          <Text style={styles.modeText}>Online</Text>
+          <Text
+            style={
+              activeMode === "online" ? styles.activeModeText : styles.modeText
+            }
+          >
+            Online
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -148,56 +348,17 @@ export default function SearchScreen() {
         {currentIndex + 1 < mockTrades.length && (
           <View style={[styles.card, styles.cardBehind]} />
         )}
+        {currentIndex + 2 < mockTrades.length && (
+          <View style={[styles.card, styles.cardFurtherBehind]} />
+        )}
 
-        {/* Current card */}
-        <View style={styles.card}>
-          <Image
-            source={{ uri: currentTrade.image }}
-            style={styles.cardImage}
-          />
-
-          {/* Condition badge */}
-          <View style={styles.conditionBadge}>
-            <Text style={styles.conditionText}>{currentTrade.condition}</Text>
-          </View>
-
-          {/* Card info */}
-          <View style={styles.cardInfo}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>{currentTrade.title}</Text>
-              <View style={styles.pointsBadge}>
-                <Text style={styles.pointsText}>
-                  {currentTrade.tradePoints} TP
-                </Text>
-              </View>
-            </View>
-
-            <Text style={styles.cardDescription} numberOfLines={2}>
-              {currentTrade.description}
-            </Text>
-
-            <View style={styles.cardFooter}>
-              <View style={styles.locationRow}>
-                <Ionicons
-                  name="location-outline"
-                  size={16}
-                  color={COLORS.text.secondary}
-                />
-                <Text style={styles.locationText}>{currentTrade.distance}</Text>
-              </View>
-
-              <View style={styles.ratingRow}>
-                <Ionicons name="star" size={16} color={COLORS.secondary} />
-                <Text style={styles.ratingText}>
-                  {currentTrade.owner.rating}
-                </Text>
-                <Text style={styles.ownerText}>
-                  • {currentTrade.owner.name}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
+        {/* Current swipeable card */}
+        <SwipeCard
+          trade={currentTrade}
+          onSwipeLeft={handleSwipeLeft}
+          onSwipeRight={handleSwipeRight}
+          isActive={true}
+        />
       </View>
 
       {/* Action buttons */}
@@ -242,20 +403,22 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: SIZES.h3,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
     color: COLORS.text.primary,
   },
   instructions: {
     textAlign: "center",
+    fontFamily: "Rubik-Regular",
     fontSize: SIZES.small,
     color: COLORS.text.secondary,
+    marginBottom: SIZES.md,
   },
   modeSelector: {
     flexDirection: "row",
     justifyContent: "center",
     gap: SIZES.sm,
     paddingHorizontal: SIZES.padding,
-    marginTop: 2,
+    marginBottom: SIZES.lg,
   },
   modeButton: {
     flexDirection: "row",
@@ -273,18 +436,18 @@ const styles = StyleSheet.create({
   modeText: {
     fontSize: SIZES.small,
     color: COLORS.text.secondary,
-    fontWeight: "600",
+    fontFamily: "Rubik-Medium",
   },
   activeModeText: {
     fontSize: SIZES.small,
     color: COLORS.white,
-    fontWeight: "600",
+    fontFamily: "Rubik-Medium",
   },
   cardContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 30,
+    position: "relative",
   },
   card: {
     width: CARD_WIDTH,
@@ -293,12 +456,17 @@ const styles = StyleSheet.create({
     borderRadius: SIZES.cardRadius * 1.5,
     overflow: "hidden",
     ...SHADOWS.large,
+    position: "absolute",
   },
   cardBehind: {
-    position: "absolute",
-    top: -10,
-    opacity: 0.5,
+    top: -5,
+    opacity: 0.7,
     transform: [{ scale: 0.95 }],
+  },
+  cardFurtherBehind: {
+    top: -10,
+    opacity: 0.4,
+    transform: [{ scale: 0.9 }],
   },
   cardImage: {
     width: "100%",
@@ -321,6 +489,8 @@ const styles = StyleSheet.create({
   },
   cardInfo: {
     padding: SIZES.padding,
+    flex: 1,
+    justifyContent: "space-between",
   },
   cardHeader: {
     flexDirection: "row",
@@ -330,7 +500,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: SIZES.h4,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
     color: COLORS.text.primary,
     flex: 1,
   },
@@ -343,10 +513,11 @@ const styles = StyleSheet.create({
   pointsText: {
     color: COLORS.white,
     fontSize: SIZES.small,
-    fontWeight: "bold",
+    fontFamily: "Rubik-Bold",
   },
   cardDescription: {
     fontSize: SIZES.small,
+    fontFamily: "Rubik-Medium",
     color: COLORS.text.secondary,
     marginBottom: SIZES.md,
     lineHeight: 20,
@@ -363,10 +534,12 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: SIZES.tiny,
+    fontFamily: "Rubik-Regular",
     color: COLORS.text.secondary,
   },
   ratingRow: {
     flexDirection: "row",
+    fontFamily: "Rubik-Medium",
     alignItems: "center",
     gap: 4,
   },
@@ -377,6 +550,7 @@ const styles = StyleSheet.create({
   },
   ownerText: {
     fontSize: SIZES.tiny,
+    fontFamily: "Rubik-Regular",
     color: COLORS.text.secondary,
   },
   actions: {
@@ -423,6 +597,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: SIZES.small,
+    fontFamily: "Rubik-Medium",
     color: COLORS.text.secondary,
   },
   emptyState: {
@@ -432,13 +607,47 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: SIZES.body,
-    fontWeight: "600",
+    fontFamily: "Rubik-Medium",
     color: COLORS.text.primary,
     marginTop: SIZES.md,
   },
   emptySubtext: {
     fontSize: SIZES.small,
+    fontFamily: "Rubik-Regular",
     color: COLORS.text.secondary,
     marginTop: SIZES.xs,
+  },
+  // Swipe overlay styles
+  likeOverlay: {
+    position: "absolute",
+    top: 50,
+    left: 40,
+    borderWidth: 4,
+    borderColor: COLORS.success,
+    borderRadius: 8,
+    padding: 8,
+    transform: [{ rotate: "-15deg" }],
+    zIndex: 1000,
+  },
+  likeText: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: COLORS.success,
+  },
+  nopeOverlay: {
+    position: "absolute",
+    top: 50,
+    right: 40,
+    borderWidth: 4,
+    borderColor: COLORS.error,
+    borderRadius: 8,
+    padding: 8,
+    transform: [{ rotate: "15deg" }],
+    zIndex: 1000,
+  },
+  nopeText: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: COLORS.error,
   },
 });

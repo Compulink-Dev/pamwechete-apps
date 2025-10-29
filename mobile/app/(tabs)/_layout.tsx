@@ -1,12 +1,25 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../constants/theme";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { ActivityIndicator, StyleSheet } from "react-native";
+import useAppFonts from "@/hooks/useFonts";
 
 export default function TabsLayout() {
+  const { fontsLoaded } = useAppFonts();
+
+  if (!fontsLoaded) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: COLORS.primary,
+        tabBarActiveTintColor: COLORS.secondary,
         tabBarInactiveTintColor: COLORS.text.secondary,
         tabBarStyle: {
           backgroundColor: COLORS.white,
@@ -18,7 +31,7 @@ export default function TabsLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: "600",
+          fontFamily: "Rubik-Medium", // ✅ use Rubik font
         },
         headerShown: false,
       }}
@@ -71,3 +84,10 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+});
