@@ -7,21 +7,24 @@
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-       "image": "./assets/images/logo-white.png",
-       "resizeMode": "contain",
-       "backgroundColor": "#003C5C",
-       "imageStyle": {
-           "width": 200,
-           "height": 200,
-           "margin": 40
-       }
+      "image": "./assets/images/logo-white.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#003C5C",
+      "imageStyle": {
+        "width": 200,
+        "height": 200,
+        "margin": 40
+      }
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pamwechete.mobile"
+      "bundleIdentifier": "com.pamwechete.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -38,6 +41,14 @@
       "expo-secure-store",
       "expo-font"
     ],
-    "scheme": "pamwechete"
+    "scheme": "pamwechete",
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "cb784b21-e547-499e-8bd6-bb07c358203e"
+      }
+    }
   }
 }
