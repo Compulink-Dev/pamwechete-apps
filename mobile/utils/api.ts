@@ -1,7 +1,7 @@
 // utils/api.js
 import axios from 'axios';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://pamwechete-api.onrender.com//api';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://pamwechete-api.onrender.com/api';
 
 console.log('🔌 Environment variables check:');
 console.log('EXPO_PUBLIC_API_URL:', process.env.EXPO_PUBLIC_API_URL);
