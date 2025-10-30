@@ -49,18 +49,27 @@ export default function ProfileScreen() {
     );
   }
 
-  // Function to make authenticated API calls
+  // Replace the existing makeAuthenticatedRequest function with this:
   const makeAuthenticatedRequest = async (config: any) => {
     try {
       const token = await getToken();
-      if (token) {
-        config.headers = {
+      console.log("🔐 Token available:", !!token);
+
+      const finalConfig = {
+        ...config,
+        headers: {
           ...config.headers,
-          Authorization: `Bearer ${token}`,
-        };
-      }
-      return api(config);
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      };
+
+      console.log(
+        "🌐 Making request to:",
+        `${api.defaults.baseURL}${config.url}`
+      );
+      return api(finalConfig);
     } catch (error) {
+      console.error("❌ Auth request setup failed:", error);
       throw error;
     }
   };
@@ -69,15 +78,22 @@ export default function ProfileScreen() {
     try {
       setError(null);
       console.log("🔄 Fetching user profile...");
+      console.log("👤 Clerk User ID:", clerkUser?.id);
 
       const response = await makeAuthenticatedRequest({
         method: "GET",
         url: endpoints.users.profile,
       });
 
+      console.log("✅ Profile response status:", response.status);
+      console.log("✅ Profile data:", response.data);
+
       const userData = response.data.user;
 
-      console.log("✅ Profile data received:", userData);
+      // Check if user data exists
+      if (!userData) {
+        throw new Error("No user data received");
+      }
 
       setUserStats({
         tradePoints: userData.tradePoints || 0,
@@ -87,16 +103,27 @@ export default function ProfileScreen() {
       });
       setIsVerified(userData.isVerified || false);
     } catch (error: any) {
-      console.error("❌ Error fetching user profile:", error);
+      console.error("❌ Profile fetch error:", {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        url: error.config?.url,
+      });
 
-      if (error.response?.status === 401) {
-        setError("Authentication failed. Please sign in again.");
+      // More specific error handling
+      if (error.code === "ERR_NETWORK") {
+        setError("Network error: Cannot connect to server");
+      } else if (error.response?.status === 401) {
+        setError("Session expired. Please sign in again.");
       } else if (error.response?.status === 404) {
-        setError("Profile not found. Please complete registration.");
-        // Auto-sync user if not found
-        syncUser();
+        setError("Profile not found. Creating new profile...");
+        await syncUser();
+      } else if (error.response?.status >= 500) {
+        setError("Server error. Please try again later.");
       } else {
-        setError("Failed to load profile. Please try again.");
+        setError(
+          "Failed to load profile: " + (error.message || "Unknown error")
+        );
       }
     } finally {
       setLoading(false);
@@ -107,20 +134,33 @@ export default function ProfileScreen() {
   const syncUser = async () => {
     try {
       console.log("🔄 Syncing user with backend...");
-      await makeAuthenticatedRequest({
+
+      if (!clerkUser) {
+        throw new Error("No clerk user available");
+      }
+
+      const response = await makeAuthenticatedRequest({
         method: "POST",
         url: endpoints.users.sync,
         data: {
-          clerkId: clerkUser?.id,
-          name: clerkUser?.fullName,
-          email: clerkUser?.primaryEmailAddress?.emailAddress,
-          phone: clerkUser?.primaryPhoneNumber?.phoneNumber,
+          clerkId: clerkUser.id,
+          name: clerkUser.fullName || "Trader",
+          email: clerkUser.primaryEmailAddress?.emailAddress,
+          phone: clerkUser.primaryPhoneNumber?.phoneNumber,
         },
       });
+
+      console.log("✅ Sync successful:", response.data);
+
       // Retry fetching profile after sync
-      fetchUserProfile();
-    } catch (syncError) {
-      console.error("❌ Sync failed:", syncError);
+      await fetchUserProfile();
+    } catch (syncError: any) {
+      console.error("❌ Sync failed:", {
+        message: syncError.message,
+        status: syncError.response?.status,
+        data: syncError.response?.data,
+      });
+      setError("Failed to create profile. Please try again.");
     }
   };
 
