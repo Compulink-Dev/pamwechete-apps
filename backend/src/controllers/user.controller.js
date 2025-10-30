@@ -197,22 +197,28 @@ exports.getCurrentUser = async (req, res) => {
 /**
  * Create or sync user from Clerk
  */
+// controllers/user.controller.js - Update syncUser function
 exports.syncUser = async (req, res) => {
   try {
-    const { clerkId, name, email, phone } = req.body;
+    const { name, email, phone } = req.body;
 
-    console.log("🔄 Syncing user:", { clerkId, name, email });
+    console.log("🔄 Syncing user:", {
+      clerkId: req.auth.userId,
+      name,
+      email,
+      phone,
+    });
 
     let user = await User.findOne({ clerkId: req.auth.userId });
 
     if (!user) {
-      // Create new user
+      // Create new user with safe defaults
       user = new User({
         clerkId: req.auth.userId,
         name: name || "Trader",
-        email: email,
-        phone: phone,
-        tradePoints: 100, // Starting points
+        email: email || `${req.auth.userId}@temporary.com`,
+        phone: phone || null, // Allow null
+        tradePoints: 100,
         isVerified: false,
       });
 
