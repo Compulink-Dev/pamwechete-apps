@@ -91,7 +91,7 @@ const tradeSchema = new mongoose.Schema(
     tradePoints: {
       type: Number,
       default: 0, // Start with 0, will be calculated in pre-save
-      min: 1, // Minimum 1 point
+      min: 0, // Minimum 1 point
     },
     // Location
     location: {

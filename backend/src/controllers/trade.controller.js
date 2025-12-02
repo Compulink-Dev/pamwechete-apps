@@ -94,9 +94,14 @@ exports.getTradeById = async (req, res) => {
  * Create new trade
  */
 // In controllers/trade.controller.js - update createTrade function
+// Update the createTrade function in trade.controller.js
 exports.createTrade = async (req, res) => {
   try {
-    console.log("📥 Creating trade with data:", req.body);
+    console.log(
+      "📥 Creating trade with data:",
+      JSON.stringify(req.body, null, 2)
+    );
+    console.log("👤 Auth user ID:", req.auth?.userId);
 
     if (!req.auth || !req.auth.userId) {
       return res.status(401).json({
@@ -124,7 +129,10 @@ exports.createTrade = async (req, res) => {
       valuation,
       images,
       location,
+      tradePoints, // Get tradePoints from request
     } = req.body;
+
+    console.log("📊 Frontend sent tradePoints:", tradePoints);
 
     // Ensure valuation has all required fields with defaults
     const tradeData = {
@@ -141,6 +149,7 @@ exports.createTrade = async (req, res) => {
         brand: valuation?.brand || "",
         currency: valuation?.currency || "USD",
       },
+      tradePoints: tradePoints || 0, // Use frontend value or default
       images: images || [],
       location: location || {
         city: "",
@@ -151,27 +160,34 @@ exports.createTrade = async (req, res) => {
       status: "active",
     };
 
-    console.log("📤 Final trade data for model:", tradeData);
+    console.log(
+      "📤 Final trade data for model:",
+      JSON.stringify(tradeData, null, 2)
+    );
 
     const trade = new Trade(tradeData);
 
-    // Log before save
-    console.log("💾 Saving trade...");
-    console.log("Trade before save:", {
-      valuation: trade.valuation,
-      condition: trade.condition,
-      category: trade.category,
-      tradePoints: trade.tradePoints,
-    });
+    // Log the trade object before any middleware
+    console.log("🔄 Trade object created:");
+    console.log("- tradePoints from constructor:", trade.tradePoints);
+    console.log("- valuation:", trade.valuation);
+    console.log("- condition:", trade.condition);
+    console.log("- category:", trade.category);
 
+    // Test the static calculation method
+    const calculatedPoints = Trade.calculateTradePoints(
+      trade.valuation,
+      trade.condition,
+      trade.category
+    );
+    console.log("🧪 Test calculation result:", calculatedPoints);
+
+    // Save the trade
+    console.log("💾 Saving trade...");
     await trade.save();
 
-    // Log after save
     console.log("✅ Trade saved successfully!");
-    console.log("Trade after save:", {
-      id: trade._id,
-      tradePoints: trade.tradePoints,
-    });
+    console.log("📈 Final trade points:", trade.tradePoints);
 
     // Populate owner info
     await trade.populate("owner", "name email profileImage rating");
@@ -186,14 +202,10 @@ exports.createTrade = async (req, res) => {
 
     // More detailed error logging
     if (error.name === "ValidationError") {
-      console.error(
-        "Validation errors:",
-        Object.keys(error.errors).map((key) => ({
-          field: key,
-          message: error.errors[key].message,
-          value: error.errors[key].value,
-        }))
-      );
+      console.error("Validation errors:");
+      for (const [key, err] of Object.entries(error.errors)) {
+        console.error(`  ${key}: ${err.message} (value: ${err.value})`);
+      }
     }
 
     res.status(500).json({
