@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,11 @@ import {
   PanResponder,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "@clerk/clerk-expo";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import api from "../../utils/api";
+import { endpoints } from "../../utils/authApi";
 import { COLORS, SIZES, SHADOWS } from "../../constants/theme";
 import useAppFonts from "@/hooks/useFonts";
 
@@ -20,55 +24,22 @@ const CARD_WIDTH = SCREEN_WIDTH - 40;
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
 
 interface TradeCard {
-  id: string;
+  _id: string;
   title: string;
   description: string;
-  image: string;
+  images: { url: string }[];
   tradePoints: number;
-  location: string;
-  distance: string;
+  location: {
+    city: string;
+    state: string;
+  };
   condition: string;
   owner: {
     name: string;
-    rating: number;
+    rating: { average: number };
   };
 }
 
-const mockTrades: TradeCard[] = [
-  {
-    id: "1",
-    title: "Samsung S24",
-    description: "Great condition, barely used. Comes with original case.",
-    image: "https://via.placeholder.com/400",
-    tradePoints: 167,
-    location: "New York, NY",
-    distance: "4 miles away",
-    condition: "Good",
-    owner: { name: "John Doe", rating: 4.8 },
-  },
-  {
-    id: "2",
-    title: "Designer Handbag",
-    description: "Authentic designer handbag from 2023 collection",
-    image: "https://via.placeholder.com/400",
-    tradePoints: 450,
-    location: "Brooklyn, NY",
-    distance: "8 miles away",
-    condition: "Excellent",
-    owner: { name: "Jane Smith", rating: 4.7 },
-  },
-  {
-    id: "3",
-    title: "Gaming Console",
-    description: "Like new gaming console with 2 controllers",
-    image: "https://via.placeholder.com/400",
-    tradePoints: 300,
-    location: "Queens, NY",
-    distance: "12 miles away",
-    condition: "Like New",
-    owner: { name: "Mike Johnson", rating: 4.9 },
-  },
-];
 
 // SwipeCard Component
 interface SwipeCardProps {
@@ -166,7 +137,10 @@ const SwipeCard = ({
         <Text style={styles.nopeText}>NOPE</Text>
       </Animated.View>
 
-      <Image source={{ uri: trade.image }} style={styles.cardImage} />
+      <Image 
+        source={{ uri: trade.images[0]?.url || 'https://via.placeholder.com/400' }} 
+        style={styles.cardImage} 
+      />
 
       {/* Condition badge */}
       <View style={styles.conditionBadge}>
@@ -193,12 +167,12 @@ const SwipeCard = ({
               size={16}
               color={COLORS.text.secondary}
             />
-            <Text style={styles.locationText}>{trade.distance}</Text>
+            <Text style={styles.locationText}>{trade.location.city}, {trade.location.state}</Text>
           </View>
 
           <View style={styles.ratingRow}>
             <Ionicons name="star" size={16} color={COLORS.secondary} />
-            <Text style={styles.ratingText}>{trade.owner.rating}</Text>
+            <Text style={styles.ratingText}>{trade.owner.rating.average.toFixed(1)}</Text>
             <Text style={styles.ownerText}>• {trade.owner.name}</Text>
           </View>
         </View>
@@ -209,11 +183,39 @@ const SwipeCard = ({
 
 export default function SearchScreen() {
   const { fontsLoaded } = useAppFonts();
+  const { getToken } = useAuth();
+  const [trades, setTrades] = useState<TradeCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [likedTrades, setLikedTrades] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeMode, setActiveMode] = useState<"in-person" | "online">(
     "in-person"
   );
+
+  useEffect(() => {
+    fetchTrades();
+  }, []);
+
+  const fetchTrades = async () => {
+    try {
+      const token = await getToken();
+      const response = await api.get(endpoints.trades.recommendations, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTrades(response.data.trades || response.data.recommendations || []);
+    } catch (error) {
+      console.error('Error fetching trades:', error);
+      // Fallback to regular trades list
+      try {
+        const response = await api.get(endpoints.trades.list);
+        setTrades(response.data.trades || []);
+      } catch (err) {
+        console.error('Error fetching trades list:', err);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!fontsLoaded) {
     return (
@@ -225,11 +227,24 @@ export default function SearchScreen() {
     );
   }
 
-  const currentTrade = mockTrades[currentIndex];
+  const currentTrade = trades[currentIndex];
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (currentTrade) {
-      setLikedTrades([...likedTrades, currentTrade.id]);
+      setLikedTrades([...likedTrades, currentTrade._id]);
+      
+      // Save to wishlist
+      try {
+        const token = await getToken();
+        await api.post(
+          endpoints.trades.wishlist,
+          { tradeId: currentTrade._id },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch (error) {
+        console.error('Error adding to wishlist:', error);
+      }
+      
       nextCard();
     }
   };
@@ -249,11 +264,8 @@ export default function SearchScreen() {
   };
 
   const nextCard = () => {
-    if (currentIndex < mockTrades.length - 1) {
+    if (currentIndex < trades.length - 1) {
       setCurrentIndex(currentIndex + 1);
-    } else {
-      // Reset or show "no more trades" message
-      setCurrentIndex(0);
     }
   };
 
@@ -267,8 +279,8 @@ export default function SearchScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.emptyState}>
-          <Ionicons name="cube-outline" size={64} color={COLORS.text.light} />
-          <Text style={styles.emptyText}>No more trades</Text>
+      <Ionicons name="cube-outline" size={64} color={COLORS.text.light} />
+          <Text style={styles.emptyText}>{loading ? 'Loading...' : 'No more trades'}</Text>
           <Text style={styles.emptySubtext}>
             Check back later for new items
           </Text>
@@ -345,10 +357,10 @@ export default function SearchScreen() {
       {/* Card Stack */}
       <View style={styles.cardContainer}>
         {/* Background cards for depth effect */}
-        {currentIndex + 1 < mockTrades.length && (
+        {currentIndex + 1 < trades.length && (
           <View style={[styles.card, styles.cardBehind]} />
         )}
-        {currentIndex + 2 < mockTrades.length && (
+        {currentIndex + 2 < trades.length && (
           <View style={[styles.card, styles.cardFurtherBehind]} />
         )}
 
@@ -367,7 +379,10 @@ export default function SearchScreen() {
           <Ionicons name="close" size={32} color={COLORS.error} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.infoButton}>
+        <TouchableOpacity 
+          style={styles.infoButton}
+          onPress={() => currentTrade && router.push(`/trades/${currentTrade._id}` as any)}
+        >
           <Ionicons
             name="information-circle-outline"
             size={28}
@@ -383,7 +398,7 @@ export default function SearchScreen() {
       {/* Progress indicator */}
       <View style={styles.progressContainer}>
         <Text style={styles.progressText}>
-          {currentIndex + 1} / {mockTrades.length}
+          {currentIndex + 1} / {trades.length}
         </Text>
       </View>
     </SafeAreaView>

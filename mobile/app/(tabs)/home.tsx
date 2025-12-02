@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useUser } from "@clerk/clerk-expo";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SIZES, SHADOWS, FONTS } from "../../constants/theme";
 import api from "../../utils/api";
@@ -69,7 +70,11 @@ export default function HomeScreen() {
   }
 
   const renderTradeCard = (trade: Trade) => (
-    <TouchableOpacity key={trade._id} style={styles.tradeCard}>
+    <TouchableOpacity 
+      key={trade._id} 
+      style={styles.tradeCard}
+      onPress={() => router.push(`/trades/${trade._id}` as any)}
+    >
       <Image
         source={{
           uri: trade.images[0]?.url || "https://via.placeholder.com/300",
@@ -122,7 +127,7 @@ export default function HomeScreen() {
         </View>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => setShowAddModal(true)}
+          onPress={() => router.push('/trades/add' as any)}
         >
           <Ionicons name="add" size={24} color={COLORS.white} />
           <Text style={styles.addButtonText}>Add</Text>
