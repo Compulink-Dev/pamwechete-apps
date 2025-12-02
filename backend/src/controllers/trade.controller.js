@@ -365,26 +365,50 @@ exports.searchTrades = async (req, res) => {
   }
 };
 
+// controllers/trade.controller.js - Update getRecommendations function
 /**
  * Get personalized recommendations
  */
 exports.getRecommendations = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    console.log("📊 Getting recommendations for user:", req.auth?.userId);
 
-    // Find trades matching user interests
+    if (!req.auth || !req.auth.userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
+      });
+    }
+
+    // Find user by Clerk ID
+    const user = await User.findOne({ clerkId: req.auth.userId });
+
+    if (!user) {
+      console.log("❌ User not found in database");
+      return res.json({
+        success: true,
+        trades: [],
+        message: "No recommendations available",
+      });
+    }
+
+    console.log("👤 Found user:", user._id);
+
+    // Get some random active trades (excluding user's own trades)
     const trades = await Trade.find({
       status: "active",
-      owner: { $ne: req.user._id },
-      category: { $in: user.interests },
+      owner: { $ne: user._id },
     })
       .populate("owner", "name rating profileImage")
-      .sort({ tradePoints: -1 })
+      .sort({ createdAt: -1 })
       .limit(10);
+
+    console.log("✅ Found", trades.length, "recommendations");
 
     res.json({
       success: true,
       trades,
+      count: trades.length,
     });
   } catch (error) {
     console.error("Get recommendations error:", error);
