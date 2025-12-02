@@ -197,6 +197,8 @@ export default function AddTradeScreen() {
     return true;
   };
 
+  // In your AddTradeScreen.tsx - update the handleSubmit function
+
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
@@ -221,15 +223,19 @@ export default function AddTradeScreen() {
           city: formData.city,
           state: formData.state,
         },
-        images: [], // Will be updated after upload
+        images: images.map((uri) => ({ url: uri })), // Convert to array of objects
       };
 
-      // For now, send without images (you'll need file upload endpoint)
+      console.log("📤 Sending trade data:", JSON.stringify(tradeData, null, 2));
+
       const response = await api.post(endpoints.trades.create, tradeData, {
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
+
+      console.log("✅ Trade created:", response.data);
 
       Alert.alert("Success", "Trade created successfully!", [
         {

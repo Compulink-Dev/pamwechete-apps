@@ -1,5 +1,5 @@
-const Trade = require('../models/Trade');
-const User = require('../models/User');
+const Trade = require("../models/Trade");
+const User = require("../models/User");
 
 /**
  * Get all trades with pagination and filters
@@ -13,7 +13,7 @@ exports.getAllTrades = async (req, res) => {
       condition,
       minPoints,
       maxPoints,
-      status = 'active',
+      status = "active",
     } = req.query;
 
     const query = { status };
@@ -27,7 +27,7 @@ exports.getAllTrades = async (req, res) => {
     }
 
     const trades = await Trade.find(query)
-      .populate('owner', 'name rating profileImage')
+      .populate("owner", "name rating profileImage")
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -45,10 +45,10 @@ exports.getAllTrades = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Get trades error:', error);
+    console.error("Get trades error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch trades',
+      message: "Failed to fetch trades",
       error: error.message,
     });
   }
@@ -59,13 +59,15 @@ exports.getAllTrades = async (req, res) => {
  */
 exports.getTradeById = async (req, res) => {
   try {
-    const trade = await Trade.findById(req.params.id)
-      .populate('owner', 'name rating profileImage phone email');
+    const trade = await Trade.findById(req.params.id).populate(
+      "owner",
+      "name rating profileImage phone email"
+    );
 
     if (!trade) {
       return res.status(404).json({
         success: false,
-        message: 'Trade not found',
+        message: "Trade not found",
       });
     }
 
@@ -77,59 +79,84 @@ exports.getTradeById = async (req, res) => {
       trade,
     });
   } catch (error) {
-    console.error('Get trade error:', error);
+    console.error("Get trade error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch trade',
+      message: "Failed to fetch trade",
       error: error.message,
     });
   }
 };
+
+// controllers/trade.controller.js - update createTrade function
 
 /**
  * Create new trade
  */
 exports.createTrade = async (req, res) => {
   try {
+    console.log("📥 Creating trade with data:", req.body);
+    console.log("👤 Auth user ID:", req.auth?.userId);
+
+    if (!req.auth || !req.auth.userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
+      });
+    }
+
+    // Find user by Clerk ID
+    const user = await User.findOne({ clerkId: req.auth.userId });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found in database",
+      });
+    }
+
     const {
       title,
       description,
       category,
-      subcategory,
       condition,
       tradeType,
       valuation,
       images,
       location,
-      preferences,
     } = req.body;
 
+    // Create trade
     const trade = new Trade({
-      owner: req.user._id,
+      owner: user._id, // Use MongoDB user ID
       title,
       description,
       category,
-      subcategory,
       condition,
-      tradeType,
+      tradeType: tradeType || "product",
       valuation,
       images: images || [],
       location,
-      preferences,
+      status: "active",
     });
 
     await trade.save();
 
+    // Populate owner info
+    await trade.populate("owner", "name email profileImage rating");
+
+    console.log("✅ Trade created successfully:", trade._id);
+
     res.status(201).json({
       success: true,
-      message: 'Trade created successfully',
+      message: "Trade created successfully",
       trade,
     });
   } catch (error) {
-    console.error('Create trade error:', error);
+    console.error("❌ Create trade error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to create trade',
+      message: "Failed to create trade",
       error: error.message,
     });
   }
@@ -145,7 +172,7 @@ exports.updateTrade = async (req, res) => {
     if (!trade) {
       return res.status(404).json({
         success: false,
-        message: 'Trade not found',
+        message: "Trade not found",
       });
     }
 
@@ -153,17 +180,25 @@ exports.updateTrade = async (req, res) => {
     if (trade.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: 'Not authorized to update this trade',
+        message: "Not authorized to update this trade",
       });
     }
 
     // Update fields
     const allowedUpdates = [
-      'title', 'description', 'category', 'subcategory',
-      'condition', 'valuation', 'images', 'location', 'preferences', 'status'
+      "title",
+      "description",
+      "category",
+      "subcategory",
+      "condition",
+      "valuation",
+      "images",
+      "location",
+      "preferences",
+      "status",
     ];
 
-    allowedUpdates.forEach(field => {
+    allowedUpdates.forEach((field) => {
       if (req.body[field] !== undefined) {
         trade[field] = req.body[field];
       }
@@ -173,14 +208,14 @@ exports.updateTrade = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Trade updated successfully',
+      message: "Trade updated successfully",
       trade,
     });
   } catch (error) {
-    console.error('Update trade error:', error);
+    console.error("Update trade error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update trade',
+      message: "Failed to update trade",
       error: error.message,
     });
   }
@@ -196,7 +231,7 @@ exports.deleteTrade = async (req, res) => {
     if (!trade) {
       return res.status(404).json({
         success: false,
-        message: 'Trade not found',
+        message: "Trade not found",
       });
     }
 
@@ -204,7 +239,7 @@ exports.deleteTrade = async (req, res) => {
     if (trade.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: 'Not authorized to delete this trade',
+        message: "Not authorized to delete this trade",
       });
     }
 
@@ -212,13 +247,13 @@ exports.deleteTrade = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Trade deleted successfully',
+      message: "Trade deleted successfully",
     });
   } catch (error) {
-    console.error('Delete trade error:', error);
+    console.error("Delete trade error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to delete trade',
+      message: "Failed to delete trade",
       error: error.message,
     });
   }
@@ -231,7 +266,7 @@ exports.searchTrades = async (req, res) => {
   try {
     const { q, category, lat, lng, radius = 50 } = req.query;
 
-    let query = { status: 'active' };
+    let query = { status: "active" };
 
     // Text search
     if (q) {
@@ -245,10 +280,10 @@ exports.searchTrades = async (req, res) => {
 
     // Location-based search
     if (lat && lng) {
-      query['location.coordinates'] = {
+      query["location.coordinates"] = {
         $near: {
           $geometry: {
-            type: 'Point',
+            type: "Point",
             coordinates: [parseFloat(lng), parseFloat(lat)],
           },
           $maxDistance: radius * 1000, // Convert km to meters
@@ -257,7 +292,7 @@ exports.searchTrades = async (req, res) => {
     }
 
     const trades = await Trade.find(query)
-      .populate('owner', 'name rating profileImage')
+      .populate("owner", "name rating profileImage")
       .limit(20);
 
     res.json({
@@ -266,10 +301,10 @@ exports.searchTrades = async (req, res) => {
       trades,
     });
   } catch (error) {
-    console.error('Search trades error:', error);
+    console.error("Search trades error:", error);
     res.status(500).json({
       success: false,
-      message: 'Search failed',
+      message: "Search failed",
       error: error.message,
     });
   }
@@ -284,11 +319,11 @@ exports.getRecommendations = async (req, res) => {
 
     // Find trades matching user interests
     const trades = await Trade.find({
-      status: 'active',
+      status: "active",
       owner: { $ne: req.user._id },
       category: { $in: user.interests },
     })
-      .populate('owner', 'name rating profileImage')
+      .populate("owner", "name rating profileImage")
       .sort({ tradePoints: -1 })
       .limit(10);
 
@@ -297,10 +332,10 @@ exports.getRecommendations = async (req, res) => {
       trades,
     });
   } catch (error) {
-    console.error('Get recommendations error:', error);
+    console.error("Get recommendations error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get recommendations',
+      message: "Failed to get recommendations",
       error: error.message,
     });
   }
@@ -316,7 +351,7 @@ exports.likeTrade = async (req, res) => {
     if (!trade) {
       return res.status(404).json({
         success: false,
-        message: 'Trade not found',
+        message: "Trade not found",
       });
     }
 
@@ -324,7 +359,7 @@ exports.likeTrade = async (req, res) => {
 
     if (alreadyLiked) {
       trade.likedBy = trade.likedBy.filter(
-        id => id.toString() !== req.user._id.toString()
+        (id) => id.toString() !== req.user._id.toString()
       );
       trade.likes -= 1;
     } else {
@@ -340,10 +375,10 @@ exports.likeTrade = async (req, res) => {
       likes: trade.likes,
     });
   } catch (error) {
-    console.error('Like trade error:', error);
+    console.error("Like trade error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to like trade',
+      message: "Failed to like trade",
       error: error.message,
     });
   }
@@ -359,7 +394,7 @@ exports.addToWishlist = async (req, res) => {
     if (!trade) {
       return res.status(404).json({
         success: false,
-        message: 'Trade not found',
+        message: "Trade not found",
       });
     }
 
@@ -367,7 +402,7 @@ exports.addToWishlist = async (req, res) => {
 
     if (inWishlist) {
       trade.inWishlist = trade.inWishlist.filter(
-        id => id.toString() !== req.user._id.toString()
+        (id) => id.toString() !== req.user._id.toString()
       );
     } else {
       trade.inWishlist.push(req.user._id);
@@ -380,10 +415,10 @@ exports.addToWishlist = async (req, res) => {
       inWishlist: !inWishlist,
     });
   } catch (error) {
-    console.error('Wishlist error:', error);
+    console.error("Wishlist error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update wishlist',
+      message: "Failed to update wishlist",
       error: error.message,
     });
   }
@@ -396,18 +431,18 @@ exports.getWishlist = async (req, res) => {
   try {
     const trades = await Trade.find({
       inWishlist: req.user._id,
-      status: 'active',
-    }).populate('owner', 'name rating profileImage');
+      status: "active",
+    }).populate("owner", "name rating profileImage");
 
     res.json({
       success: true,
       trades,
     });
   } catch (error) {
-    console.error('Get wishlist error:', error);
+    console.error("Get wishlist error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch wishlist',
+      message: "Failed to fetch wishlist",
       error: error.message,
     });
   }

@@ -58,10 +58,17 @@ export default function TradeDetailsScreen() {
   const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
-    fetchTradeDetails();
+    if (id) {
+      fetchTradeDetails();
+    } else {
+      Alert.alert("Error", "Trade ID not found");
+      router.back();
+    }
   }, [id]);
 
   const fetchTradeDetails = async () => {
+    if (!id) return;
+
     try {
       const token = await getToken();
       const response = await api.get(endpoints.trades.details(id), {
@@ -78,6 +85,8 @@ export default function TradeDetailsScreen() {
   };
 
   const handleRequestTrade = () => {
+    if (!id) return;
+
     Alert.alert(
       "Request Trade",
       `Send a trade request for "${trade?.title}"?`,
@@ -104,6 +113,8 @@ export default function TradeDetailsScreen() {
   };
 
   const handleDelete = () => {
+    if (!id) return;
+
     Alert.alert("Delete Trade", "Are you sure you want to delete this trade?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -126,6 +137,8 @@ export default function TradeDetailsScreen() {
   };
 
   const toggleLike = async () => {
+    if (!id) return;
+
     try {
       const token = await getToken();
       await api.post(
@@ -139,6 +152,12 @@ export default function TradeDetailsScreen() {
     }
   };
 
+  const navigateToEdit = () => {
+    if (id) {
+      router.push(`/trades/${id}/edit` as any);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -148,7 +167,20 @@ export default function TradeDetailsScreen() {
   }
 
   if (!trade) {
-    return null;
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="warning-outline" size={64} color={COLORS.error} />
+          <Text style={styles.errorText}>Trade not found</Text>
+          <TouchableOpacity
+            style={styles.backButtonFull}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const isOwner = trade.owner._id === user?.id;
@@ -321,7 +353,7 @@ export default function TradeDetailsScreen() {
           <View style={styles.ownerActions}>
             <TouchableOpacity
               style={[styles.actionButton, styles.editButton]}
-              onPress={() => router.push(`/trades/${id}/edit` as any)}
+              onPress={navigateToEdit}
             >
               <Ionicons name="create-outline" size={20} color={COLORS.white} />
               <Text style={styles.actionButtonText}>Edit</Text>
@@ -352,6 +384,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: SIZES.padding,
+  },
+  errorText: {
+    fontSize: SIZES.h3,
+    fontFamily: "Rubik-Bold",
+    color: COLORS.text.primary,
+    marginTop: SIZES.md,
+    marginBottom: SIZES.lg,
+  },
+  backButtonFull: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SIZES.xl,
+    paddingVertical: SIZES.md,
+    borderRadius: SIZES.radius,
+  },
+  backButtonText: {
+    color: COLORS.white,
+    fontSize: SIZES.body,
+    fontFamily: "Rubik-Bold",
   },
   header: {
     position: "absolute",
