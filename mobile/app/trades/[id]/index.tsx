@@ -84,32 +84,42 @@ export default function TradeDetailsScreen() {
     }
   };
 
-  const handleRequestTrade = () => {
-    if (!id) return;
+  const handleRequestTrade = async () => {
+    if (!id || !trade) return;
 
-    Alert.alert(
-      "Request Trade",
-      `Send a trade request for "${trade?.title}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Send Request",
-          onPress: async () => {
-            try {
-              const token = await getToken();
-              await api.post(
-                endpoints.tradeRequests.create,
-                { tradeId: id },
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
-              Alert.alert("Success", "Trade request sent!");
-            } catch (error) {
-              Alert.alert("Error", "Failed to send trade request");
-            }
-          },
+    try {
+      const token = await getToken();
+      // Create conversation and send initial message
+      const response = await api.post(
+        endpoints.messages.send,
+        { 
+          recipientId: trade.owner._id,
+          tradeId: id,
+          content: `Hi! I'm interested in trading for "${trade.title}". Let's discuss!`,
+          type: 'text'
         },
-      ]
-    );
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      Alert.alert(
+        "Success",
+        "Conversation started! You can now chat with the owner.",
+        [
+          {
+            text: "Go to Chat",
+            onPress: () => {
+              if (response.data.conversation) {
+                router.push(`/messages/${response.data.conversation._id}` as any);
+              }
+            },
+          },
+          { text: "OK", style: "cancel" },
+        ]
+      );
+    } catch (error) {
+      console.error("Error starting conversation:", error);
+      Alert.alert("Error", "Failed to start conversation");
+    }
   };
 
   const handleDelete = () => {

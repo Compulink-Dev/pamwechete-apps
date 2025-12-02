@@ -17,13 +17,16 @@ exports.getConversations = async (req, res) => {
       .lean();
 
     // Filter out current user from participants list
-    const formatted = conversations.map(conv => ({
-      ...conv,
-      participants: conv.participants.filter(
-        p => p._id.toString() !== req.user._id.toString()
-      ),
-      unreadCount: conv.unreadCount?.get(req.user._id.toString()) || 0,
-    }));
+    const formatted = conversations.map(conv => {
+      const userId = req.user._id.toString();
+      return {
+        ...conv,
+        participants: conv.participants.filter(
+          p => p._id.toString() !== userId
+        ),
+        unreadCount: conv.unreadCount?.[userId] || 0,
+      };
+    });
 
     res.json({
       success: true,
