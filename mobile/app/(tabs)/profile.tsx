@@ -423,7 +423,10 @@ export default function ProfileScreen() {
             <View style={styles.menuSection}>
               <Text style={styles.sectionTitle}>Trading</Text>
 
-              <TouchableOpacity style={styles.menuItem}>
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => router.push('/profile/trades' as any)}
+              >
                 <View style={styles.menuItemLeft}>
                   <Ionicons
                     name="cube-outline"
@@ -439,7 +442,10 @@ export default function ProfileScreen() {
                 />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.menuItem}>
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => router.push('/profile/wishlist' as any)}
+              >
                 <View style={styles.menuItemLeft}>
                   <Ionicons
                     name="heart-outline"
@@ -455,7 +461,10 @@ export default function ProfileScreen() {
                 />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.menuItem}>
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => router.push('/profile/history' as any)}
+              >
                 <View style={styles.menuItemLeft}>
                   <Ionicons
                     name="time-outline"
@@ -475,7 +484,10 @@ export default function ProfileScreen() {
             <View style={styles.menuSection}>
               <Text style={styles.sectionTitle}>Settings</Text>
 
-              <TouchableOpacity style={styles.menuItem}>
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => router.push('/profile/notifications' as any)}
+              >
                 <View style={styles.menuItemLeft}>
                   <Ionicons
                     name="notifications-outline"
@@ -491,7 +503,10 @@ export default function ProfileScreen() {
                 />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.menuItem}>
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => router.push('/profile/settings' as any)}
+              >
                 <View style={styles.menuItemLeft}>
                   <Ionicons
                     name="lock-closed-outline"

@@ -526,3 +526,34 @@ exports.getWishlist = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get user's own trades
+ */
+exports.getUserTrades = async (req, res) => {
+  try {
+    const { status } = req.query;
+    const query = { owner: req.user._id };
+    
+    // Filter by status if provided (active, pending, completed, cancelled)
+    if (status) {
+      query.status = status;
+    }
+
+    const trades = await Trade.find(query)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({
+      success: true,
+      trades,
+    });
+  } catch (error) {
+    console.error("Get user trades error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch user trades",
+      error: error.message,
+    });
+  }
+};

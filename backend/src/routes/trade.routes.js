@@ -10,6 +10,8 @@ router.get("/search", tradeController.searchTrades);
 
 // MOVED BEFORE :id ROUTE
 router.get("/recommendations", requireAuth, tradeController.getRecommendations);
+router.get("/my-trades", requireAuth, tradeController.getUserTrades);
+router.get("/wishlist", requireAuth, tradeController.getWishlist);
 
 // This must come AFTER specific routes like /recommendations
 router.get("/:id", tradeController.getTradeById);
@@ -25,6 +27,5 @@ router.delete("/:id", requireVerified, tradeController.deleteTrade);
 // Trade interactions
 router.post("/:id/like", tradeController.likeTrade);
 router.post("/:id/wishlist", tradeController.addToWishlist);
-router.get("/wishlist", tradeController.getWishlist);
 
 module.exports = router;
