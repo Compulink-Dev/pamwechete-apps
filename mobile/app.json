@@ -42,13 +42,13 @@
       "expo-font"
     ],
     "scheme": "pamwechete",
-    "extra": {
-      "router": {
-        "origin": false
-      },
-      "eas": {
-        "projectId": "cb784b21-e547-499e-8bd6-bb07c358203e"
-      }
-    }
+  "extra": {
+  "router": {
+    "origin": false
+  },
+  "eas": {
+    "projectId": "cb784b21-e547-499e-8bd6-bb07c358203e"
+  }
+}
   }
 }

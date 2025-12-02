@@ -7,7 +7,7 @@ import {
   FlatList,
   SafeAreaView,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 
 const INTERESTS = [
@@ -17,6 +17,7 @@ const INTERESTS = [
 ];
 
 export default function OnboardingInterests() {
+  const params = useLocalSearchParams();
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
 
   const toggleInterest = (interest: string) => {
@@ -31,7 +32,12 @@ export default function OnboardingInterests() {
     if (selectedInterests.length > 0) {
       router.push({
         pathname: '/onboarding/offering',
-        params: { interests: JSON.stringify(selectedInterests) },
+        params: {
+          name: params.name,
+          email: params.email,
+          phone: params.phone,
+          interests: JSON.stringify(selectedInterests),
+        },
       });
     }
   };

@@ -11,19 +11,12 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useSignUp } from "@clerk/clerk-expo";
 import { COLORS, SIZES, SHADOWS } from "../../constants/theme";
 
-export default function OnboardingRegister() {
+export default function CompleteProfile() {
   const params = useLocalSearchParams();
-  const { signUp, setActive, isLoaded } = useSignUp();
 
   const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
     address: "",
     city: "",
     state: "",
@@ -31,6 +24,9 @@ export default function OnboardingRegister() {
   });
   const [loading, setLoading] = useState(false);
 
+  const name = params.name as string;
+  const email = params.email as string;
+  const phone = params.phone as string;
   const interests = params.interests
     ? JSON.parse(params.interests as string)
     : [];
@@ -42,94 +38,40 @@ export default function OnboardingRegister() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const validateForm = () => {
-    if (
-      !formData.name ||
-      !formData.phone ||
-      !formData.email ||
-      !formData.password
-    ) {
-      Alert.alert("Error", "Please fill in all required fields");
-      return false;
-    }
 
-    if (formData.password !== formData.confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
-      return false;
-    }
-
-    if (formData.password.length < 8) {
-      Alert.alert("Error", "Password must be at least 8 characters");
-      return false;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      Alert.alert("Error", "Please enter a valid email address");
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleRegister = async () => {
-    if (!validateForm()) return;
-
-    if (!signUp || !isLoaded) {
-      Alert.alert(
-        "Error",
-        "Registration service is not ready. Please try again."
-      );
-      return;
-    }
-
+  const handleComplete = async () => {
     setLoading(true);
     try {
-      // Start the sign-up process
-      await signUp.create({
-        emailAddress: formData.email,
-        password: formData.password,
-      });
-
-      // Start the email verification process
-      await signUp.prepareEmailAddressVerification();
-
-      // Store the user data for after verification
+      // User is already authenticated at this point
+      // TODO: Send user data to backend API
       const userData = {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
+        name,
+        email,
+        phone,
         address: {
           street: formData.address || "",
           city: formData.city || "",
           state: formData.state || "",
           zipCode: formData.zipCode || "",
         },
-        interests: interests || [],
-        offerings: offerings || [],
+        interests,
+        offerings,
       };
 
-      console.log("Registration prepared successfully");
+      console.log("User profile to save:", userData);
+      // await api.post(endpoints.users.create, userData);
 
-      // Navigate to verification screen
-      router.push({
-        pathname: "/verify-email",
-        params: {
-          userData: JSON.stringify(userData),
-          email: formData.email,
-        },
-      });
+      // Navigate to home
+      router.replace('/(tabs)/home');
     } catch (error: any) {
-      console.error("Registration error:", error);
-      let errorMessage = "Registration failed. Please try again.";
+      console.error("Profile completion error:", error);
+      let errorMessage = "Failed to complete profile. Please try again.";
 
-      if (error.errors && error.errors.length > 0) {
-        errorMessage = error.errors[0].longMessage || error.errors[0].message;
-      } else if (error.message) {
+      if (error.message) {
         errorMessage = error.message;
       }
 
-      Alert.alert("Registration Failed", errorMessage);
+      Alert.alert("Profile Completion Failed", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -139,58 +81,15 @@ export default function OnboardingRegister() {
     router.back();
   };
 
-  if (!isLoaded) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Complete Your Profile</Text>
+        <Text style={styles.title}>Almost Done!</Text>
         <Text style={styles.subtitle}>
-          Just a few more details to get started
+          Add your address (optional) to help find nearby trades
         </Text>
 
         <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Full Name *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.name}
-              onChangeText={(val) => handleChange("name", val)}
-              placeholder="John Doe"
-              autoCapitalize="words"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone Number *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.phone}
-              onChangeText={(val) => handleChange("phone", val)}
-              placeholder="+1 234 567 8900"
-              keyboardType="phone-pad"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email Address *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.email}
-              onChangeText={(val) => handleChange("email", val)}
-              placeholder="john@example.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Street Address</Text>
             <TextInput
@@ -236,32 +135,6 @@ export default function OnboardingRegister() {
               maxLength={5}
             />
           </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.password}
-              onChangeText={(val) => handleChange("password", val)}
-              placeholder="Min. 8 characters"
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Confirm Password *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.confirmPassword}
-              onChangeText={(val) => handleChange("confirmPassword", val)}
-              placeholder="Re-enter password"
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
         </View>
 
         <View style={styles.footer}>
@@ -285,13 +158,13 @@ export default function OnboardingRegister() {
                 styles.registerButton,
                 loading && styles.registerButtonDisabled,
               ]}
-              onPress={handleRegister}
+              onPress={handleComplete}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color={COLORS.white} />
               ) : (
-                <Text style={styles.registerButtonText}>Create Account</Text>
+                <Text style={styles.registerButtonText}>Complete & Continue</Text>
               )}
             </TouchableOpacity>
           </View>

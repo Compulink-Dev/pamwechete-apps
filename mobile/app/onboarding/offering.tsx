@@ -30,8 +30,11 @@ export default function OnboardingOffering() {
   const handleNext = () => {
     if (selectedOfferings.length > 0) {
       router.push({
-        pathname: '/onboarding/register',
+        pathname: '/onboarding/complete',
         params: {
+          name: params.name,
+          email: params.email,
+          phone: params.phone,
           interests: params.interests,
           offerings: JSON.stringify(selectedOfferings),
         },
