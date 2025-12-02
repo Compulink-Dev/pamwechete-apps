@@ -20,11 +20,24 @@ import api from "../../utils/api";
 import { endpoints } from "@/utils/authApi";
 import useAppFonts from "@/hooks/useFonts";
 
-interface UserStats {
+interface UserProfile {
+  id: string;
+  clerkId: string;
+  name: string;
+  email: string;
   tradePoints: number;
-  rating: { average: number };
+  rating: { average: number; count: number };
   completedTrades: number;
   activeTrades: number;
+  isVerified: boolean;
+  phone: string | null;
+  address: any;
+  createdAt: string;
+  verification: {
+    status: string;
+    phoneVerified: boolean;
+    documents: any[];
+  };
 }
 
 export default function ProfileScreen() {
@@ -33,10 +46,9 @@ export default function ProfileScreen() {
   const { user: clerkUser, isLoaded } = useUser();
   const { signOut } = useClerk();
   const { getToken } = useAuth();
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!fontsLoaded) {
@@ -49,7 +61,6 @@ export default function ProfileScreen() {
     );
   }
 
-  // Replace the existing makeAuthenticatedRequest function with this:
   const makeAuthenticatedRequest = async (config: any) => {
     try {
       const token = await getToken();
@@ -78,7 +89,6 @@ export default function ProfileScreen() {
     try {
       setError(null);
       console.log("🔄 Fetching user profile...");
-      console.log("👤 Clerk User ID:", clerkUser?.id);
 
       const response = await makeAuthenticatedRequest({
         method: "GET",
@@ -95,13 +105,26 @@ export default function ProfileScreen() {
         throw new Error("No user data received");
       }
 
-      setUserStats({
+      // Store the complete user profile
+      setUserProfile({
+        id: userData.id,
+        clerkId: userData.clerkId,
+        name: userData.name || "Trader", // Use API name
+        email: userData.email,
         tradePoints: userData.tradePoints || 0,
-        rating: userData.rating || { average: 0 },
+        rating: userData.rating || { average: 0, count: 0 },
         completedTrades: userData.completedTrades || 0,
         activeTrades: userData.activeTrades || 0,
+        isVerified: userData.isVerified || false,
+        phone: userData.phone || null,
+        address: userData.address || {},
+        createdAt: userData.createdAt,
+        verification: userData.verification || {
+          status: "pending",
+          phoneVerified: false,
+          documents: [],
+        },
       });
-      setIsVerified(userData.isVerified || false);
     } catch (error: any) {
       console.error("❌ Profile fetch error:", {
         message: error.message,
@@ -144,7 +167,7 @@ export default function ProfileScreen() {
         url: endpoints.users.sync,
         data: {
           clerkId: clerkUser.id,
-          name: clerkUser.fullName || "Trader",
+          name: clerkUser.fullName || "Trader", // Use Clerk name for initial sync
           email: clerkUser.primaryEmailAddress?.emailAddress,
           phone: clerkUser.primaryPhoneNumber?.phoneNumber,
         },
@@ -241,7 +264,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Verification Alert */}
-        {!isVerified && !loading && (
+        {userProfile && !userProfile.isVerified && !loading && (
           <TouchableOpacity
             style={styles.verificationAlert}
             onPress={handleVerifyAccount}
@@ -270,7 +293,7 @@ export default function ProfileScreen() {
               }}
               style={styles.avatar}
             />
-            {isVerified && (
+            {userProfile?.isVerified && (
               <View style={styles.verifiedBadge}>
                 <Ionicons
                   name="checkmark-circle"
@@ -281,11 +304,12 @@ export default function ProfileScreen() {
             )}
           </View>
 
+          {/* Use the name from API response */}
           <Text style={styles.profileName}>
-            {clerkUser?.fullName || "Trader"}
+            {userProfile?.name || clerkUser?.fullName || "Trader"}
           </Text>
           <Text style={styles.profileEmail}>
-            {clerkUser?.primaryEmailAddress?.emailAddress}
+            {userProfile?.email || clerkUser?.primaryEmailAddress?.emailAddress}
           </Text>
 
           {loading ? (
@@ -295,28 +319,30 @@ export default function ProfileScreen() {
               style={{ marginVertical: SIZES.md }}
             />
           ) : (
-            <View style={styles.statsRow}>
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>
-                  {userStats?.tradePoints || 0}
-                </Text>
-                <Text style={styles.statLabel}>TP</Text>
+            userProfile && (
+              <View style={styles.statsRow}>
+                <View style={styles.stat}>
+                  <Text style={styles.statValue}>
+                    {userProfile.tradePoints}
+                  </Text>
+                  <Text style={styles.statLabel}>TP</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.stat}>
+                  <Text style={styles.statValue}>
+                    {userProfile.rating.average.toFixed(1)}
+                  </Text>
+                  <Text style={styles.statLabel}>Rating</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.stat}>
+                  <Text style={styles.statValue}>
+                    {userProfile.completedTrades}
+                  </Text>
+                  <Text style={styles.statLabel}>Trades</Text>
+                </View>
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>
-                  {userStats?.rating?.average?.toFixed(1) || "0.0"}
-                </Text>
-                <Text style={styles.statLabel}>Rating</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>
-                  {userStats?.completedTrades || 0}
-                </Text>
-                <Text style={styles.statLabel}>Trades</Text>
-              </View>
-            </View>
+            )
           )}
 
           <TouchableOpacity style={styles.editButton}>
@@ -325,7 +351,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Only show menu items when not loading and no error */}
-        {!loading && !error && (
+        {!loading && !error && userProfile && (
           <>
             {/* Menu Items */}
             <View style={styles.menuSection}>
@@ -360,9 +386,13 @@ export default function ProfileScreen() {
                   <Text style={styles.menuItemText}>Verification</Text>
                 </View>
                 <View style={styles.menuItemRight}>
-                  {!isVerified && (
+                  {!userProfile.isVerified && (
                     <View style={styles.pendingBadge}>
-                      <Text style={styles.pendingText}>Pending</Text>
+                      <Text style={styles.pendingText}>
+                        {userProfile.verification.status === "pending"
+                          ? "Pending"
+                          : "Required"}
+                      </Text>
                     </View>
                   )}
                   <Ionicons

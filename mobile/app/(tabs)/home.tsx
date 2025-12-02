@@ -12,7 +12,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useUser, useAuth } from "@clerk/clerk-expo"; // Add useAuth
+import { useUser, useAuth } from "@clerk/clerk-expo";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SIZES, SHADOWS, FONTS } from "../../constants/theme";
@@ -45,11 +45,32 @@ interface PortfolioStats {
   tradePoints: number;
 }
 
+interface UserProfile {
+  id: string;
+  clerkId: string;
+  name: string;
+  email: string;
+  tradePoints: number;
+  rating: { average: number; count: number };
+  completedTrades: number;
+  activeTrades: number;
+  isVerified: boolean;
+  phone: string | null;
+  address: any;
+  createdAt: string;
+  verification: {
+    status: string;
+    phoneVerified: boolean;
+    documents: any[];
+  };
+}
+
 export default function HomeScreen() {
-  const { user } = useUser();
-  const { getToken } = useAuth(); // Get getToken for authenticated requests
+  const { user: clerkUser } = useUser();
+  const { getToken } = useAuth();
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [portfolioStats, setPortfolioStats] = useState<PortfolioStats>({
     totalListings: 0,
     activeTrades: 0,
@@ -63,7 +84,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchTrades();
-    fetchPortfolioStats();
+    fetchUserProfileAndStats();
   }, []);
 
   const fetchTrades = async () => {
@@ -75,62 +96,80 @@ export default function HomeScreen() {
     }
   };
 
-  const fetchPortfolioStats = async () => {
+  const fetchUserProfileAndStats = async () => {
     try {
       const token = await getToken();
-      if (!token) return;
+      if (!token) {
+        console.log("No token available");
+        setLoading(false);
+        return;
+      }
 
-      // Get user profile to get stats
-      const response = await api.get(endpoints.users.profile, {
+      // Get user profile
+      const profileResponse = await api.get(endpoints.users.profile, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const userData = response.data.user;
+      console.log("✅ Home Screen - Profile response:", profileResponse.data);
+
+      const userData = profileResponse.data.user;
       if (userData) {
+        // Store the complete user profile
+        setUserProfile({
+          id: userData.id,
+          clerkId: userData.clerkId,
+          name: userData.name || "Trader", // Use API name
+          email: userData.email,
+          tradePoints: userData.tradePoints || 0,
+          rating: userData.rating || { average: 0, count: 0 },
+          completedTrades: userData.completedTrades || 0,
+          activeTrades: userData.activeTrades || 0,
+          isVerified: userData.isVerified || false,
+          phone: userData.phone || null,
+          address: userData.address || {},
+          createdAt: userData.createdAt,
+          verification: userData.verification || {
+            status: "pending",
+            phoneVerified: false,
+            documents: [],
+          },
+        });
+
+        // Calculate portfolio stats based on user profile
+        let totalListings = 0;
+
+        try {
+          // Try to get user's specific trades
+          const tradesResponse = await api.get(endpoints.trades.list, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (tradesResponse.data.trades) {
+            const userTrades = tradesResponse.data.trades.filter(
+              (trade: any) => trade.owner?._id === userData?.id
+            );
+            totalListings = userTrades.length;
+          }
+        } catch (tradesError) {
+          console.log(
+            "Could not fetch user trades for counting, using default"
+          );
+        }
+
+        // Update portfolio stats with data from user profile
         setPortfolioStats({
-          totalListings: userData.totalTrades || 0,
+          totalListings: totalListings,
           activeTrades: userData.activeTrades || 0,
           completedTrades: userData.completedTrades || 0,
-          tradePoints: userData.tradePoints || 0,
+          tradePoints: userData.tradePoints || 0, // Use tradePoints from API
         });
       }
-
-      // Alternative: Count trades by owner
-      try {
-        const tradesResponse = await api.get(endpoints.trades.list, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (tradesResponse.data.trades) {
-          const userTrades = tradesResponse.data.trades.filter(
-            (trade: any) => trade.owner?._id === userData?._id
-          );
-
-          const activeTrades = userTrades.filter(
-            (trade: any) => trade.status === "active"
-          ).length;
-
-          const completedTrades = userTrades.filter(
-            (trade: any) => trade.status === "completed"
-          ).length;
-
-          const totalTradePoints = userTrades.reduce(
-            (sum: number, trade: any) => sum + (trade.tradePoints || 0),
-            0
-          );
-
-          setPortfolioStats({
-            totalListings: userTrades.length,
-            activeTrades,
-            completedTrades,
-            tradePoints: totalTradePoints,
-          });
-        }
-      } catch (tradesError) {
-        console.log("Could not fetch user trades for counting");
-      }
-    } catch (error) {
-      console.error("Error fetching portfolio stats:", error);
+    } catch (error: any) {
+      console.error("Error fetching user profile and stats:", {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
     } finally {
       setLoading(false);
     }
@@ -139,7 +178,7 @@ export default function HomeScreen() {
   // Refresh function
   const refreshData = async () => {
     setLoading(true);
-    await Promise.all([fetchTrades(), fetchPortfolioStats()]);
+    await Promise.all([fetchTrades(), fetchUserProfileAndStats()]);
     setLoading(false);
   };
 
@@ -205,7 +244,9 @@ export default function HomeScreen() {
           />
           <View>
             <Text style={styles.welcomeText}>Welcome,</Text>
-            <Text style={styles.userName}>{user?.firstName || "Trader"}</Text>
+            <Text style={styles.userName}>
+              {userProfile?.name || clerkUser?.firstName || "Trader"}
+            </Text>
           </View>
         </View>
         <TouchableOpacity
@@ -241,7 +282,9 @@ export default function HomeScreen() {
             <Text style={styles.statLabel}>Completed</Text>
           </View>
         </View>
-        <Text style={styles.tradePoints}>{portfolioStats.tradePoints} TP</Text>
+        <Text style={styles.tradePoints}>
+          {userProfile?.tradePoints || portfolioStats.tradePoints || 0} TP
+        </Text>
       </TouchableOpacity>
 
       {/* Available Trades */}

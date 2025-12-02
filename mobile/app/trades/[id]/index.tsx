@@ -313,7 +313,29 @@ export default function TradeDetailsScreen() {
                 </View>
               </View>
               {!isOwner && (
-                <TouchableOpacity style={styles.messageButton}>
+                <TouchableOpacity 
+                  style={styles.messageButton}
+                  onPress={async () => {
+                    try {
+                      const token = await getToken();
+                      const response = await api.post(
+                        endpoints.messages.send,
+                        { 
+                          recipientId: trade.owner._id,
+                          tradeId: id,
+                          content: 'Hi, I\'m interested in this trade.',
+                          type: 'text'
+                        },
+                        { headers: { Authorization: `Bearer ${token}` } }
+                      );
+                      if (response.data.conversation) {
+                        router.push(`/messages/${response.data.conversation._id}` as any);
+                      }
+                    } catch (error) {
+                      Alert.alert('Error', 'Failed to start conversation');
+                    }
+                  }}
+                >
                   <Ionicons
                     name="chatbubble-outline"
                     size={20}
