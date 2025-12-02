@@ -93,10 +93,10 @@ exports.getTradeById = async (req, res) => {
 /**
  * Create new trade
  */
+// In controllers/trade.controller.js - update createTrade function
 exports.createTrade = async (req, res) => {
   try {
     console.log("📥 Creating trade with data:", req.body);
-    console.log("👤 Auth user ID:", req.auth?.userId);
 
     if (!req.auth || !req.auth.userId) {
       return res.status(401).json({
@@ -126,26 +126,55 @@ exports.createTrade = async (req, res) => {
       location,
     } = req.body;
 
-    // Create trade
-    const trade = new Trade({
-      owner: user._id, // Use MongoDB user ID
+    // Ensure valuation has all required fields with defaults
+    const tradeData = {
+      owner: user._id,
       title,
       description,
       category,
-      condition,
+      condition: condition || "good",
       tradeType: tradeType || "product",
-      valuation,
+      valuation: {
+        baseValue: valuation?.baseValue || 0,
+        age: valuation?.age || 0,
+        quality: valuation?.quality || 5,
+        brand: valuation?.brand || "",
+        currency: valuation?.currency || "USD",
+      },
       images: images || [],
-      location,
+      location: location || {
+        city: "",
+        state: "",
+        country: "",
+        address: "",
+      },
       status: "active",
+    };
+
+    console.log("📤 Final trade data for model:", tradeData);
+
+    const trade = new Trade(tradeData);
+
+    // Log before save
+    console.log("💾 Saving trade...");
+    console.log("Trade before save:", {
+      valuation: trade.valuation,
+      condition: trade.condition,
+      category: trade.category,
+      tradePoints: trade.tradePoints,
     });
 
     await trade.save();
 
+    // Log after save
+    console.log("✅ Trade saved successfully!");
+    console.log("Trade after save:", {
+      id: trade._id,
+      tradePoints: trade.tradePoints,
+    });
+
     // Populate owner info
     await trade.populate("owner", "name email profileImage rating");
-
-    console.log("✅ Trade created successfully:", trade._id);
 
     res.status(201).json({
       success: true,
@@ -154,10 +183,24 @@ exports.createTrade = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Create trade error:", error);
+
+    // More detailed error logging
+    if (error.name === "ValidationError") {
+      console.error(
+        "Validation errors:",
+        Object.keys(error.errors).map((key) => ({
+          field: key,
+          message: error.errors[key].message,
+          value: error.errors[key].value,
+        }))
+      );
+    }
+
     res.status(500).json({
       success: false,
       message: "Failed to create trade",
       error: error.message,
+      validationErrors: error.errors,
     });
   }
 };

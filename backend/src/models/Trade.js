@@ -75,7 +75,10 @@ const tradeSchema = new mongoose.Schema(
         type: String,
         default: "USD",
       },
-      age: Number, // in months
+      age: {
+        type: Number,
+        default: 0, // Add default value for age
+      }, // in months
       quality: {
         type: Number,
         min: 1,
@@ -84,11 +87,11 @@ const tradeSchema = new mongoose.Schema(
       },
       brand: String,
     },
-    // Calculated trade points
+    // Calculated trade points - SINGLE DEFINITION
     tradePoints: {
       type: Number,
-      required: true,
-      min: 0,
+      default: 0, // Start with 0, will be calculated in pre-save
+      min: 1, // Minimum 1 point
     },
     // Location
     location: {
@@ -223,13 +226,22 @@ tradeSchema.pre("save", function (next) {
   if (
     this.isModified("valuation") ||
     this.isModified("condition") ||
+    this.isModified("category") ||
     this.isNew
   ) {
-    this.tradePoints = this.constructor.calculateTradePoints(
+    console.log("🔢 Calculating trade points...");
+    console.log("📊 Valuation:", this.valuation);
+    console.log("🔧 Condition:", this.condition);
+    console.log("🏷️ Category:", this.category);
+
+    const calculatedPoints = this.constructor.calculateTradePoints(
       this.valuation,
       this.condition,
       this.category
     );
+
+    console.log("✅ Calculated points:", calculatedPoints);
+    this.tradePoints = calculatedPoints;
   }
   next();
 });

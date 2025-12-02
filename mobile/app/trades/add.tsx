@@ -206,24 +206,54 @@ export default function AddTradeScreen() {
     try {
       const token = await getToken();
 
-      // Prepare trade data matching backend schema
+      // Calculate trade points on frontend
+      const calculateTradePoints = () => {
+        const baseValue = parseFloat(formData.baseValue) || 0;
+        const age = parseInt(formData.age) || 0;
+        const quality = parseInt(formData.quality) || 5;
+
+        const conditionMultipliers: { [key: string]: number } = {
+          new: 1.0,
+          like_new: 0.9,
+          good: 0.75,
+          fair: 0.6,
+          poor: 0.4,
+        };
+
+        const conditionMultiplier =
+          conditionMultipliers[formData.condition] || 0.5;
+        const qualityMultiplier = 0.5 + quality / 10;
+        const years = age / 12;
+        const ageDepreciation =
+          years <= 5 ? baseValue * 0.05 * years : baseValue * 0.25;
+
+        const points = Math.round(
+          baseValue * conditionMultiplier * qualityMultiplier - ageDepreciation
+        );
+        return Math.max(points, 1);
+      };
+
+      const tradePoints = calculateTradePoints();
+
+      // Prepare trade data
       const tradeData = {
         title: formData.title,
         description: formData.description,
         category: formData.category,
         condition: formData.condition,
-        tradeType: "product", // Default to product
+        tradeType: "product",
         valuation: {
           baseValue: parseFloat(formData.baseValue),
           age: parseInt(formData.age) || 0,
           quality: parseInt(formData.quality),
-          brand: formData.brand || undefined,
+          brand: formData.brand || "",
         },
+        tradePoints, // Include calculated points
+        images: images.map((uri) => ({ url: uri })),
         location: {
           city: formData.city,
           state: formData.state,
         },
-        images: images.map((uri) => ({ url: uri })), // Convert to array of objects
       };
 
       console.log("📤 Sending trade data:", JSON.stringify(tradeData, null, 2));
