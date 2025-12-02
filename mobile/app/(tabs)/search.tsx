@@ -40,7 +40,6 @@ interface TradeCard {
   };
 }
 
-
 // SwipeCard Component
 interface SwipeCardProps {
   trade: TradeCard;
@@ -137,9 +136,11 @@ const SwipeCard = ({
         <Text style={styles.nopeText}>NOPE</Text>
       </Animated.View>
 
-      <Image 
-        source={{ uri: trade.images[0]?.url || 'https://via.placeholder.com/400' }} 
-        style={styles.cardImage} 
+      <Image
+        source={{
+          uri: trade.images[0]?.url || "https://via.placeholder.com/400",
+        }}
+        style={styles.cardImage}
       />
 
       {/* Condition badge */}
@@ -167,12 +168,16 @@ const SwipeCard = ({
               size={16}
               color={COLORS.text.secondary}
             />
-            <Text style={styles.locationText}>{trade.location.city}, {trade.location.state}</Text>
+            <Text style={styles.locationText}>
+              {trade.location.city}, {trade.location.state}
+            </Text>
           </View>
 
           <View style={styles.ratingRow}>
             <Ionicons name="star" size={16} color={COLORS.secondary} />
-            <Text style={styles.ratingText}>{trade.owner.rating.average.toFixed(1)}</Text>
+            <Text style={styles.ratingText}>
+              {trade.owner.rating.average.toFixed(1)}
+            </Text>
             <Text style={styles.ownerText}>• {trade.owner.name}</Text>
           </View>
         </View>
@@ -181,6 +186,7 @@ const SwipeCard = ({
   );
 };
 
+// Update the SearchScreen component
 export default function SearchScreen() {
   const { fontsLoaded } = useAppFonts();
   const { getToken } = useAuth();
@@ -191,30 +197,92 @@ export default function SearchScreen() {
   const [activeMode, setActiveMode] = useState<"in-person" | "online">(
     "in-person"
   );
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchTrades();
   }, []);
 
-  const fetchTrades = async () => {
+  const fetchTrades = async (loadMore = false) => {
     try {
+      if (loadMore) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
       const token = await getToken();
-      const response = await api.get(endpoints.trades.recommendations, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setTrades(response.data.trades || response.data.recommendations || []);
-    } catch (error) {
-      console.error('Error fetching trades:', error);
-      // Fallback to regular trades list
+      const currentPage = loadMore ? page + 1 : 1;
+
       try {
-        const response = await api.get(endpoints.trades.list);
-        setTrades(response.data.trades || []);
-      } catch (err) {
-        console.error('Error fetching trades list:', err);
+        // Try recommendations first
+        const response = await api.get(endpoints.trades.recommendations, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (loadMore) {
+          // Append new trades
+          setTrades((prev) => [
+            ...prev,
+            ...(response.data.trades || response.data.recommendations || []),
+          ]);
+          setPage(currentPage);
+        } else {
+          setTrades(
+            response.data.trades || response.data.recommendations || []
+          );
+          setPage(1);
+          setCurrentIndex(0);
+        }
+
+        // Check if there are more trades to load
+        const newTrades =
+          response.data.trades || response.data.recommendations || [];
+        setHasMore(newTrades.length > 0);
+      } catch (recommendationsError) {
+        console.log("Recommendations failed, fetching regular trades");
+        // Fallback to regular trades with pagination
+        const response = await api.get(endpoints.trades.list, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { page: currentPage, limit: 10 },
+        });
+
+        if (loadMore) {
+          setTrades((prev) => [...prev, ...(response.data.trades || [])]);
+          setPage(currentPage);
+        } else {
+          setTrades(response.data.trades || []);
+          setPage(1);
+          setCurrentIndex(0);
+        }
+
+        // Check pagination info
+        const total = response.data.pagination?.total || 0;
+        const currentTrades = response.data.trades || [];
+        const pages = response.data.pagination?.pages || 1;
+        setHasMore(currentPage < pages && currentTrades.length > 0);
+      }
+    } catch (error) {
+      console.error("Error fetching trades:", error);
+      if (!loadMore) {
+        setTrades([]);
       }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const loadMoreTrades = () => {
+    if (hasMore && !loading && !refreshing) {
+      fetchTrades(true);
+    }
+  };
+
+  const refreshTrades = () => {
+    fetchTrades(false);
   };
 
   if (!fontsLoaded) {
@@ -232,7 +300,7 @@ export default function SearchScreen() {
   const handleLike = async () => {
     if (currentTrade) {
       setLikedTrades([...likedTrades, currentTrade._id]);
-      
+
       // Save to wishlist
       try {
         const token = await getToken();
@@ -242,9 +310,9 @@ export default function SearchScreen() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
       } catch (error) {
-        console.error('Error adding to wishlist:', error);
+        console.error("Error adding to wishlist:", error);
       }
-      
+
       nextCard();
     }
   };
@@ -266,10 +334,41 @@ export default function SearchScreen() {
   const nextCard = () => {
     if (currentIndex < trades.length - 1) {
       setCurrentIndex(currentIndex + 1);
+    } else {
+      // We've reached the end of current trades, load more
+      loadMoreTrades();
+      // Reset to first card after loading
+      setCurrentIndex(0);
     }
   };
 
-  if (!currentTrade) {
+  // Reset to first card when new trades are loaded
+  useEffect(() => {
+    if (trades.length > 0 && currentIndex >= trades.length) {
+      setCurrentIndex(0);
+    }
+  }, [trades, currentIndex]);
+
+  // Show loading screen when there are no trades and we're still loading
+  if (loading && trades.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Find Trades</Text>
+          <TouchableOpacity>
+            <Ionicons name="filter" size={24} color={COLORS.text.primary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading trades...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show empty state when there are no trades
+  if (!currentTrade && trades.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -279,11 +378,22 @@ export default function SearchScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.emptyState}>
-      <Ionicons name="cube-outline" size={64} color={COLORS.text.light} />
-          <Text style={styles.emptyText}>{loading ? 'Loading...' : 'No more trades'}</Text>
+          <Ionicons name="cube-outline" size={64} color={COLORS.text.light} />
+          <Text style={styles.emptyText}>No trades available</Text>
           <Text style={styles.emptySubtext}>
             Check back later for new items
           </Text>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={refreshTrades}
+            disabled={refreshing}
+          >
+            {refreshing ? (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            ) : (
+              <Text style={styles.refreshButtonText}>Refresh</Text>
+            )}
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -294,8 +404,12 @@ export default function SearchScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Find Trades</Text>
-        <TouchableOpacity>
-          <Ionicons name="filter" size={24} color={COLORS.text.primary} />
+        <TouchableOpacity onPress={refreshTrades} disabled={refreshing}>
+          {refreshing ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            <Ionicons name="refresh" size={24} color={COLORS.text.primary} />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -364,24 +478,41 @@ export default function SearchScreen() {
           <View style={[styles.card, styles.cardFurtherBehind]} />
         )}
 
+        {/* Show loading indicator when loading more */}
+        {refreshing && trades.length === 0 && (
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.loadingCardText}>Loading more trades...</Text>
+          </View>
+        )}
+
         {/* Current swipeable card */}
-        <SwipeCard
-          trade={currentTrade}
-          onSwipeLeft={handleSwipeLeft}
-          onSwipeRight={handleSwipeRight}
-          isActive={true}
-        />
+        {currentTrade && (
+          <SwipeCard
+            trade={currentTrade}
+            onSwipeLeft={handleSwipeLeft}
+            onSwipeRight={handleSwipeRight}
+            isActive={!refreshing}
+          />
+        )}
       </View>
 
       {/* Action buttons */}
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.passButton} onPress={handlePass}>
+        <TouchableOpacity
+          style={styles.passButton}
+          onPress={handlePass}
+          disabled={refreshing}
+        >
           <Ionicons name="close" size={32} color={COLORS.error} />
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.infoButton}
-          onPress={() => currentTrade && router.push(`/trades/${currentTrade._id}` as any)}
+          onPress={() =>
+            currentTrade && router.push(`/trades/${currentTrade._id}` as any)
+          }
+          disabled={refreshing}
         >
           <Ionicons
             name="information-circle-outline"
@@ -390,7 +521,11 @@ export default function SearchScreen() {
           />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.likeButton} onPress={handleLike}>
+        <TouchableOpacity
+          style={styles.likeButton}
+          onPress={handleLike}
+          disabled={refreshing}
+        >
           <Ionicons name="heart" size={32} color={COLORS.success} />
         </TouchableOpacity>
       </View>
@@ -400,6 +535,9 @@ export default function SearchScreen() {
         <Text style={styles.progressText}>
           {currentIndex + 1} / {trades.length}
         </Text>
+        {hasMore && trades.length > 0 && currentIndex === trades.length - 3 && (
+          <Text style={styles.loadMoreHint}>Loading more trades...</Text>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -664,5 +802,53 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "bold",
     color: COLORS.error,
+  },
+  loadingState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    fontSize: SIZES.body,
+    fontFamily: "Rubik-Medium",
+    color: COLORS.text.primary,
+    marginTop: SIZES.md,
+  },
+  loadingCard: {
+    width: CARD_WIDTH,
+    height: CARD_WIDTH * 1.4,
+    backgroundColor: COLORS.white,
+    borderRadius: SIZES.cardRadius * 1.5,
+    overflow: "hidden",
+    ...SHADOWS.large,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "absolute",
+  },
+  loadingCardText: {
+    fontSize: SIZES.small,
+    fontFamily: "Rubik-Regular",
+    color: COLORS.text.secondary,
+    marginTop: SIZES.md,
+  },
+  refreshButton: {
+    marginTop: SIZES.md,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SIZES.lg,
+    paddingVertical: SIZES.md,
+    borderRadius: SIZES.radius,
+    minWidth: 120,
+    alignItems: "center",
+  },
+  refreshButtonText: {
+    color: COLORS.white,
+    fontFamily: "Rubik-Bold",
+    fontSize: SIZES.small,
+  },
+  loadMoreHint: {
+    fontSize: SIZES.tiny,
+    fontFamily: "Rubik-Regular",
+    color: COLORS.text.light,
+    marginTop: SIZES.xs,
   },
 });

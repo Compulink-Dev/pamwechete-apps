@@ -1,3 +1,4 @@
+// app/(tabs)/index.tsx - Update the component
 import { useState, useEffect } from "react";
 import {
   View,
@@ -8,15 +9,16 @@ import {
   Image,
   Modal,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useUser } from "@clerk/clerk-expo";
+import { useUser, useAuth } from "@clerk/clerk-expo"; // Add useAuth
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SIZES, SHADOWS, FONTS } from "../../constants/theme";
 import api from "../../utils/api";
 import { endpoints } from "@/utils/authApi";
-import useCustomFonts from "../../hooks/useFonts"; // Add this import
+import useCustomFonts from "../../hooks/useFonts";
 
 interface Trade {
   _id: string;
@@ -36,10 +38,24 @@ interface Trade {
   };
 }
 
+interface PortfolioStats {
+  totalListings: number;
+  activeTrades: number;
+  completedTrades: number;
+  tradePoints: number;
+}
+
 export default function HomeScreen() {
   const { user } = useUser();
+  const { getToken } = useAuth(); // Get getToken for authenticated requests
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
+  const [portfolioStats, setPortfolioStats] = useState<PortfolioStats>({
+    totalListings: 0,
+    activeTrades: 0,
+    completedTrades: 0,
+    tradePoints: 0,
+  });
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Add font loading
@@ -47,17 +63,84 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchTrades();
+    fetchPortfolioStats();
   }, []);
 
   const fetchTrades = async () => {
     try {
       const response = await api.get(endpoints.trades.list);
-      setTrades(response.data.trades);
+      setTrades(response.data.trades || []);
     } catch (error) {
       console.error("Error fetching trades:", error);
+    }
+  };
+
+  const fetchPortfolioStats = async () => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+
+      // Get user profile to get stats
+      const response = await api.get(endpoints.users.profile, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const userData = response.data.user;
+      if (userData) {
+        setPortfolioStats({
+          totalListings: userData.totalTrades || 0,
+          activeTrades: userData.activeTrades || 0,
+          completedTrades: userData.completedTrades || 0,
+          tradePoints: userData.tradePoints || 0,
+        });
+      }
+
+      // Alternative: Count trades by owner
+      try {
+        const tradesResponse = await api.get(endpoints.trades.list, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (tradesResponse.data.trades) {
+          const userTrades = tradesResponse.data.trades.filter(
+            (trade: any) => trade.owner?._id === userData?._id
+          );
+
+          const activeTrades = userTrades.filter(
+            (trade: any) => trade.status === "active"
+          ).length;
+
+          const completedTrades = userTrades.filter(
+            (trade: any) => trade.status === "completed"
+          ).length;
+
+          const totalTradePoints = userTrades.reduce(
+            (sum: number, trade: any) => sum + (trade.tradePoints || 0),
+            0
+          );
+
+          setPortfolioStats({
+            totalListings: userTrades.length,
+            activeTrades,
+            completedTrades,
+            tradePoints: totalTradePoints,
+          });
+        }
+      } catch (tradesError) {
+        console.log("Could not fetch user trades for counting");
+      }
+    } catch (error) {
+      console.error("Error fetching portfolio stats:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Refresh function
+  const refreshData = async () => {
+    setLoading(true);
+    await Promise.all([fetchTrades(), fetchPortfolioStats()]);
+    setLoading(false);
   };
 
   // Show loading while fonts are loading
@@ -70,8 +153,8 @@ export default function HomeScreen() {
   }
 
   const renderTradeCard = (trade: Trade) => (
-    <TouchableOpacity 
-      key={trade._id} 
+    <TouchableOpacity
+      key={trade._id}
       style={styles.tradeCard}
       onPress={() => router.push(`/trades/${trade._id}` as any)}
     >
@@ -127,7 +210,7 @@ export default function HomeScreen() {
         </View>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => router.push('/trades/add' as any)}
+          onPress={() => router.push("/trades/add" as any)}
         >
           <Ionicons name="add" size={24} color={COLORS.white} />
           <Text style={styles.addButtonText}>Add</Text>
@@ -135,31 +218,36 @@ export default function HomeScreen() {
       </View>
 
       {/* Trade Portfolio Summary */}
-      <View style={styles.portfolioCard}>
-        <Text style={styles.portfolioTitle}>Trade Portfolio</Text>
+      <TouchableOpacity style={styles.portfolioCard} onPress={refreshData}>
+        <View style={styles.portfolioHeader}>
+          <Text style={styles.portfolioTitle}>Trade Portfolio</Text>
+          {loading && <ActivityIndicator size="small" color={COLORS.primary} />}
+        </View>
         <View style={styles.portfolioStats}>
           <View style={styles.stat}>
-            <Text style={styles.statValue}>4</Text>
+            <Text style={styles.statValue}>{portfolioStats.totalListings}</Text>
             <Text style={styles.statLabel}>Listings</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.stat}>
-            <Text style={styles.statValue}>3</Text>
+            <Text style={styles.statValue}>{portfolioStats.activeTrades}</Text>
             <Text style={styles.statLabel}>Active</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.stat}>
-            <Text style={styles.statValue}>15</Text>
+            <Text style={styles.statValue}>
+              {portfolioStats.completedTrades}
+            </Text>
             <Text style={styles.statLabel}>Completed</Text>
           </View>
         </View>
-        <Text style={styles.tradePoints}>1250 TP</Text>
-      </View>
+        <Text style={styles.tradePoints}>{portfolioStats.tradePoints} TP</Text>
+      </TouchableOpacity>
 
       {/* Available Trades */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Available Trades</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push("/search" as any)}>
           <Text style={styles.seeAllText}>See All</Text>
         </TouchableOpacity>
       </View>
@@ -168,6 +256,9 @@ export default function HomeScreen() {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={refreshData} />
+        }
       >
         {loading ? (
           <ActivityIndicator
@@ -181,62 +272,22 @@ export default function HomeScreen() {
           <View style={styles.emptyState}>
             <Ionicons name="cube-outline" size={64} color={COLORS.text.light} />
             <Text style={styles.emptyText}>No trades available</Text>
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={refreshData}
+            >
+              <Text style={styles.refreshButtonText}>Refresh</Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
 
-      {/* Add Trade Modal */}
-      <Modal
-        visible={showAddModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowAddModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add New Trade</Text>
-              <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                <Ionicons name="close" size={24} color={COLORS.text.primary} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalSubtitle}>
-              Create a new trade listing to exchange with other traders
-            </Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => {
-                setShowAddModal(false);
-                // Navigate to add trade screen
-              }}
-            >
-              <Ionicons name="camera" size={24} color={COLORS.white} />
-              <Text style={styles.modalButtonText}>Take Photo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonSecondary]}
-              onPress={() => {
-                setShowAddModal(false);
-                // Navigate to add trade screen
-              }}
-            >
-              <Ionicons name="images" size={24} color={COLORS.primary} />
-              <Text
-                style={[
-                  styles.modalButtonText,
-                  styles.modalButtonTextSecondary,
-                ]}
-              >
-                Choose from Gallery
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* Add Trade Modal - Keep your existing modal code */}
     </SafeAreaView>
   );
 }
 
+// Add these new styles:
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -288,11 +339,16 @@ const styles = StyleSheet.create({
     borderRadius: SIZES.cardRadius,
     ...SHADOWS.medium,
   },
+  portfolioHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: SIZES.sm,
+  },
   portfolioTitle: {
     fontSize: SIZES.body,
     fontFamily: FONTS.semibold,
     color: COLORS.text.primary,
-    marginBottom: SIZES.sm,
   },
   portfolioStats: {
     flexDirection: "row",
@@ -428,6 +484,18 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     color: COLORS.text.light,
     marginTop: SIZES.md,
+  },
+  refreshButton: {
+    marginTop: SIZES.md,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SIZES.lg,
+    paddingVertical: SIZES.sm,
+    borderRadius: SIZES.radius,
+  },
+  refreshButtonText: {
+    color: COLORS.white,
+    fontFamily: FONTS.bold,
+    fontSize: SIZES.small,
   },
   modalOverlay: {
     flex: 1,
